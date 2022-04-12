@@ -1,0 +1,10 @@
+[package]
+name = "backon"
+version = "0.0.0"
+edition = "2021"
+authors = ["Xuanwo <github@xuanwo.io>"]
+license = "Apache-2.0"
+documentation = "https://docs.rs/backon"
+description = "Backoff policies"
+
+[dependencies]
