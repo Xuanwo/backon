@@ -1,13 +1,13 @@
 use std::time::Duration;
 
-pub struct Constant {
+pub struct ConstantBackoff {
     delay: Duration,
     max_times: Option<usize>,
 
     attempts: usize,
 }
 
-impl Default for Constant {
+impl Default for ConstantBackoff {
     fn default() -> Self {
         Self {
             delay: Duration::from_secs(1),
@@ -17,7 +17,7 @@ impl Default for Constant {
     }
 }
 
-impl Constant {
+impl ConstantBackoff {
     pub fn with_delay(mut self, delay: Duration) -> Self {
         self.delay = delay;
         self
@@ -29,7 +29,7 @@ impl Constant {
     }
 }
 
-impl Iterator for Constant {
+impl Iterator for ConstantBackoff {
     type Item = Duration;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -49,12 +49,12 @@ impl Iterator for Constant {
 
 #[cfg(test)]
 mod tests {
-    use crate::Constant;
+    use crate::ConstantBackoff;
     use std::time::Duration;
 
     #[test]
     fn test_constant_default() {
-        let mut exp = Constant::default();
+        let mut exp = ConstantBackoff::default();
 
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
@@ -64,7 +64,7 @@ mod tests {
 
     #[test]
     fn test_constant_with_delay() {
-        let mut exp = Constant::default().with_delay(Duration::from_secs(2));
+        let mut exp = ConstantBackoff::default().with_delay(Duration::from_secs(2));
 
         assert_eq!(Some(Duration::from_secs(2)), exp.next());
         assert_eq!(Some(Duration::from_secs(2)), exp.next());
@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_constant_with_times() {
-        let mut exp = Constant::default().with_max_times(1);
+        let mut exp = ConstantBackoff::default().with_max_times(1);
 
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
         assert_eq!(None, exp.next());

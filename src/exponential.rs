@@ -1,8 +1,35 @@
 use rand::Rng;
 use std::time::Duration;
 
+/// Exponential backoff implementation.
+///
+/// # Examples
+///
+/// ```
+/// use backon::ExponentialBackoff;
+/// use anyhow::Result;
+///
+/// #[tokio::main]
+/// async fn main() -> Result<()> {
+///     for delay in ExponentialBackoff::default() {
+///         let x = reqwest::get("https://www.rust-lang.org").await?.text().await;
+///         match x {
+///             Ok(v) => {
+///                 println!("Successfully fetched");
+///                 break;
+///             },
+///             Err(_) => {
+///                 tokio::time::sleep(delay).await;
+///                 continue
+///             }
+///         };
+///     }
+///
+///     Ok(())
+/// }
+/// ```
 #[derive(Debug)]
-pub struct Exponential {
+pub struct ExponentialBackoff {
     jitter: bool,
     factor: f32,
     min_delay: Duration,
@@ -13,7 +40,7 @@ pub struct Exponential {
     attempts: usize,
 }
 
-impl Default for Exponential {
+impl Default for ExponentialBackoff {
     fn default() -> Self {
         Self {
             jitter: false,
@@ -28,7 +55,7 @@ impl Default for Exponential {
     }
 }
 
-impl Exponential {
+impl ExponentialBackoff {
     pub fn with_jitter(mut self) -> Self {
         self.jitter = true;
         self
@@ -57,7 +84,7 @@ impl Exponential {
     }
 }
 
-impl Iterator for Exponential {
+impl Iterator for ExponentialBackoff {
     type Item = Duration;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -105,12 +132,12 @@ impl Iterator for Exponential {
 
 #[cfg(test)]
 mod tests {
-    use crate::exponential::Exponential;
+    use crate::exponential::ExponentialBackoff;
     use std::time::Duration;
 
     #[test]
     fn test_exponential_default() {
-        let mut exp = Exponential::default();
+        let mut exp = ExponentialBackoff::default();
 
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
         assert_eq!(Some(Duration::from_secs(2)), exp.next());
@@ -120,7 +147,7 @@ mod tests {
 
     #[test]
     fn test_exponential_factor() {
-        let mut exp = Exponential::default().with_factor(1.5);
+        let mut exp = ExponentialBackoff::default().with_factor(1.5);
 
         assert_eq!(Some(Duration::from_secs_f32(1.0)), exp.next());
         assert_eq!(Some(Duration::from_secs_f32(1.5)), exp.next());
@@ -130,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_exponential_jitter() {
-        let mut exp = Exponential::default().with_jitter();
+        let mut exp = ExponentialBackoff::default().with_jitter();
 
         let v = exp.next().expect("value must valid");
         assert!(v >= Duration::from_secs(1), "current: {:?}", v);
@@ -149,7 +176,7 @@ mod tests {
 
     #[test]
     fn test_exponential_min_delay() {
-        let mut exp = Exponential::default().with_min_delay(Duration::from_millis(500));
+        let mut exp = ExponentialBackoff::default().with_min_delay(Duration::from_millis(500));
 
         assert_eq!(Some(Duration::from_millis(500)), exp.next());
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
@@ -159,7 +186,7 @@ mod tests {
 
     #[test]
     fn test_exponential_max_delay() {
-        let mut exp = Exponential::default().with_max_delay(Duration::from_secs(2));
+        let mut exp = ExponentialBackoff::default().with_max_delay(Duration::from_secs(2));
 
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
         assert_eq!(Some(Duration::from_secs(2)), exp.next());
@@ -169,7 +196,7 @@ mod tests {
 
     #[test]
     fn test_exponential_max_times() {
-        let mut exp = Exponential::default().with_max_times(1);
+        let mut exp = ExponentialBackoff::default().with_max_times(1);
 
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
         assert_eq!(None, exp.next());

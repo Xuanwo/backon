@@ -9,3 +9,8 @@ description = "Backoff policies"
 
 [dependencies]
 rand = "0.8.5"
+
+[dev-dependencies]
+tokio = { version = "1.17.0", features = ["full"] }
+reqwest = "0.11.10"
+anyhow = "1.0.56"
