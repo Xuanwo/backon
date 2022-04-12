@@ -8,3 +8,4 @@ documentation = "https://docs.rs/backon"
 description = "Backoff policies"
 
 [dependencies]
+rand = "0.8.5"
