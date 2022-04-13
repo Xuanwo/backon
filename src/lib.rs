@@ -4,3 +4,5 @@ mod exponential;
 pub use exponential::ExponentialBackoff;
 mod policy;
 pub use policy::Policy;
+
+mod retry;
