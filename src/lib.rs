@@ -43,4 +43,5 @@ mod exponential;
 pub use exponential::ExponentialBackoff;
 
 mod retry;
+pub use retry::Retry;
 pub use retry::Retryable;
