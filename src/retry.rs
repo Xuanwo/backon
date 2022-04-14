@@ -8,18 +8,26 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-trait Retryable<T, E, Fut: Future<Output = std::result::Result<T, E>>, FutureFn: FnMut() -> Fut> {
-    fn retry(self) -> Retry<T, E, Fut, FutureFn>;
+trait Retryable<
+    P: Policy,
+    T,
+    E,
+    Fut: Future<Output = std::result::Result<T, E>>,
+    FutureFn: FnMut() -> Fut,
+>
+{
+    fn retry(self, policy: P) -> Retry<P, T, E, Fut, FutureFn>;
 }
 
-impl<T, E, Fut, FutureFn> Retryable<T, E, Fut, FutureFn> for FutureFn
+impl<P, T, E, Fut, FutureFn> Retryable<P, T, E, Fut, FutureFn> for FutureFn
 where
+    P: Policy,
     Fut: Future<Output = std::result::Result<T, E>>,
     FutureFn: FnMut() -> Fut,
 {
-    fn retry(self) -> Retry<T, E, Fut, FutureFn> {
+    fn retry(self, policy: P) -> Retry<P, T, E, Fut, FutureFn> {
         Retry {
-            backoff: ExponentialBackoff::default(),
+            backoff: policy,
             error_fn: |_: &E| true,
             future_fn: self,
             state: State::Idle,
@@ -28,8 +36,14 @@ where
 }
 
 #[pin_project]
-struct Retry<T, E, Fut: Future<Output = std::result::Result<T, E>>, FutureFn: FnMut() -> Fut> {
-    backoff: ExponentialBackoff,
+struct Retry<
+    P: Policy,
+    T,
+    E,
+    Fut: Future<Output = std::result::Result<T, E>>,
+    FutureFn: FnMut() -> Fut,
+> {
+    backoff: P,
     error_fn: fn(&E) -> bool,
     future_fn: FutureFn,
 
@@ -55,8 +69,9 @@ where
     }
 }
 
-impl<T, E, Fut, FutureFn> Future for Retry<T, E, Fut, FutureFn>
+impl<P, T, E, Fut, FutureFn> Future for Retry<P, T, E, Fut, FutureFn>
 where
+    P: Policy,
     Fut: Future<Output = std::result::Result<T, E>>,
     FutureFn: FnMut() -> Fut,
 {
@@ -143,7 +158,7 @@ mod tests {
                 Err(anyhow::anyhow!(x))
             }
         }
-        .retry()
+        .retry(ExponentialBackoff::default())
         .await?;
 
         println!("got: {:?}", x);
@@ -162,7 +177,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_retry_x() -> anyhow::Result<()> {
-        let x = test_query.retry().await?;
+        let x = test_query.retry(ExponentialBackoff::default()).await?;
 
         println!("got: {:?}", x);
 
