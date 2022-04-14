@@ -7,6 +7,53 @@ use std::task::{Context, Poll};
 
 use crate::Backoff;
 
+/// Retryable will add retry support for functions that produces a futures with results.
+///
+/// That means all types that implement `FnMut() -> impl Future<Output = std::result::Result<T, E>>`
+/// will be able to use `retry`.
+///
+/// For example:
+///
+/// - Functions without extra args:
+///
+/// ```ignore
+/// async fn fetch() -> Result<String> {
+///     Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
+/// }
+/// ```
+///
+/// - Closures
+///
+/// ```ignore
+/// || async {
+///     let x = reqwest::get("https://www.rust-lang.org")
+///         .await?
+///         .text()
+///         .await?;
+///
+///     Err(anyhow::anyhow!(x))
+/// }
+/// ```
+///
+/// # Example
+///
+/// ```no_run
+/// use backon::Retryable;
+/// use backon::ExponentialBackoff;
+/// use anyhow::Result;
+///
+/// async fn fetch() -> Result<String> {
+///     Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
+/// }
+///
+/// #[tokio::main]
+/// async fn main() -> Result<()> {
+///     let content = fetch.retry(ExponentialBackoff::default()).await?;
+///     println!("fetch succeeded: {}", content);
+///
+///     Ok(())
+/// }
+/// ```
 pub trait Retryable<
     P: Backoff,
     T,
@@ -110,44 +157,23 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use super::*;
     use crate::exponential::ExponentialBackoff;
 
-    #[tokio::test]
-    async fn test_retry() -> anyhow::Result<()> {
-        let x = {
-            || async {
-                let x = reqwest::get("https://www.rust-lang.org")
-                    .await?
-                    .text()
-                    .await?;
-
-                Err(anyhow::anyhow!(x))
-            }
-        }
-        .retry(ExponentialBackoff::default())
-        .await?;
-
-        println!("got: {:?}", x);
-
-        Ok(())
-    }
-
-    async fn test_query() -> anyhow::Result<()> {
-        let x = reqwest::get("https://www.rust-lang.org")
-            .await?
-            .text()
-            .await?;
-
-        Err(anyhow::anyhow!(x))
+    async fn always_error() -> anyhow::Result<()> {
+        Err(anyhow::anyhow!("test_query meets error"))
     }
 
     #[tokio::test]
     async fn test_retry_x() -> anyhow::Result<()> {
-        let x = test_query.retry(ExponentialBackoff::default()).await?;
+        let result = always_error
+            .retry(ExponentialBackoff::default().with_min_delay(Duration::from_millis(1)))
+            .await;
 
-        println!("got: {:?}", x);
-
+        assert!(result.is_err());
+        assert_eq!("test_query meets error", result.unwrap_err().to_string());
         Ok(())
     }
 }

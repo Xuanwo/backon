@@ -1,5 +1,31 @@
 use std::time::Duration;
 
+/// ConstantBackoff provides backoff with constant delay and limited times.
+///
+/// # Default
+///
+/// - delay: 1s
+/// - max times: 3
+///
+/// # Examples
+///
+/// ```no_run
+/// use backon::Retryable;
+/// use backon::ConstantBackoff;
+/// use anyhow::Result;
+///
+/// async fn fetch() -> Result<String> {
+///     Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
+/// }
+///
+/// #[tokio::main]
+/// async fn main() -> Result<()> {
+///     let content = fetch.retry(ConstantBackoff::default()).await?;
+///     println!("fetch succeeded: {}", content);
+///
+///     Ok(())
+/// }
+/// ```
 pub struct ConstantBackoff {
     delay: Duration,
     max_times: Option<usize>,
@@ -18,11 +44,13 @@ impl Default for ConstantBackoff {
 }
 
 impl ConstantBackoff {
+    /// Set delay of current backoff.
     pub fn with_delay(mut self, delay: Duration) -> Self {
         self.delay = delay;
         self
     }
 
+    /// Set max times of current backoff.
     pub fn with_max_times(mut self, max_times: usize) -> Self {
         self.max_times = Some(max_times);
         self

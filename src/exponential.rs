@@ -3,25 +3,30 @@ use std::time::Duration;
 
 /// Exponential backoff implementation.
 ///
+/// # Default
+///
+/// - jitter: false
+/// - factor: 2
+/// - min_delay: 1s
+/// - max_delay: 60s
+/// - max_times: 3
+///
 /// # Examples
 ///
 /// ```no_run
+/// use backon::Retryable;
 /// use backon::ExponentialBackoff;
-/// use backon::retry;
 /// use anyhow::Result;
+///
+/// async fn fetch() -> Result<String> {
+///     Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
+/// }
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<()> {
-///     let v = retry(
-///         ExponentialBackoff::default(),
-///         |dur| tokio::time::sleep(dur),
-///         |_: &anyhow::Error| true,
-///         || async {
-///             Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
-///         }
-///     ).await?;
+///     let content = fetch.retry(ExponentialBackoff::default()).await?;
+///     println!("fetch succeeded: {}", content);
 ///
-///     println!("Fetch https://www.rust-lang.org successfully!");
 ///     Ok(())
 /// }
 /// ```
@@ -53,11 +58,20 @@ impl Default for ExponentialBackoff {
 }
 
 impl ExponentialBackoff {
+    /// Set jitter of current backoff.
+    ///
+    /// If jitter is enabled, ExponentialBackoff will add a random jitter in `[0, min_delay)
+    /// to current delay.
     pub fn with_jitter(mut self) -> Self {
         self.jitter = true;
         self
     }
 
+    /// Set factor of current backoff.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if input factor smaller than `1.0`.
     pub fn with_factor(mut self, factor: f32) -> Self {
         debug_assert!(factor > 1.0, "invalid factor that lower than 1");
 
@@ -65,16 +79,23 @@ impl ExponentialBackoff {
         self
     }
 
+    /// Set min_delay of current backoff.
     pub fn with_min_delay(mut self, min_delay: Duration) -> Self {
         self.min_delay = min_delay;
         self
     }
 
+    /// Set max_delay of current backoff.
+    ///
+    /// Delay will not increasing if current delay is larger than max_delay.
     pub fn with_max_delay(mut self, max_delay: Duration) -> Self {
         self.max_delay = Some(max_delay);
         self
     }
 
+    /// Set max_times of current backoff.
+    ///
+    /// Backoff will return `None` if max times is reaching.
     pub fn with_max_times(mut self, max_times: usize) -> Self {
         self.max_times = Some(max_times);
         self
