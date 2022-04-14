@@ -1,11 +1,11 @@
-use crate::Backoff;
 use futures::ready;
 use pin_project::pin_project;
 
 use std::future::Future;
-
 use std::pin::Pin;
 use std::task::{Context, Poll};
+
+use crate::Backoff;
 
 pub trait Retryable<
     P: Backoff,
