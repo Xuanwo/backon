@@ -1,4 +1,9 @@
-# backon
+# backon &emsp; [![Build Status]][actions] [![Latest Version]][crates.io]
+
+[Build Status]: https://img.shields.io/github/workflow/status/Xuanwo/backon/CI/main
+[actions]: https://github.com/Xuanwo/backon/actions?query=branch%3Amain
+[Latest Version]: https://img.shields.io/crates/v/backon.svg
+[crates.io]: https://crates.io/crates/backon
 
 The opposite backoff implementation of the popular [backoff](https://docs.rs/backoff).
 
@@ -25,3 +30,17 @@ async fn main() -> Result<()> {
     Ok(())
 }
 ```
+
+## Contributing
+
+Check out the [CONTRIBUTING.md](./CONTRIBUTING.md) guide for more details on getting started with contributing to this project.
+
+## Getting help
+
+Submit [issues](https://github.com/Xuanwo/backon/issues/new/choose) for bug report or asking questions in [discussion](https://github.com/Xuanwo/backon/discussions/new?category=q-a).
+
+#### License
+
+<sup>
+Licensed under <a href="./LICENSE">Apache License, Version 2.0</a>.
+</sup>
