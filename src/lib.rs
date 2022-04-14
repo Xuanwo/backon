@@ -15,7 +15,7 @@
 //!
 //! # Examples
 //!
-//! Retry will default settings.
+//! Retry with default settings.
 //!
 //! ```no_run
 //! use backon::Retryable;
@@ -35,7 +35,7 @@
 //! }
 //! ```
 //!
-//! Retry will specify retryable error.
+//! Retry with specify retryable error.
 //!
 //! ```no_run
 //! use backon::Retryable;
