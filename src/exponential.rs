@@ -5,30 +5,27 @@ use std::time::Duration;
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use backon::ExponentialBackoff;
+/// use backon::retry;
 /// use anyhow::Result;
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<()> {
-///     for delay in ExponentialBackoff::default() {
-///         let x = reqwest::get("https://www.rust-lang.org").await?.text().await;
-///         match x {
-///             Ok(v) => {
-///                 println!("Successfully fetched");
-///                 break;
-///             },
-///             Err(_) => {
-///                 tokio::time::sleep(delay).await;
-///                 continue
-///             }
-///         };
-///     }
+///     let v = retry(
+///         ExponentialBackoff::default(),
+///         |dur| tokio::time::sleep(dur),
+///         |_: &anyhow::Error| true,
+///         || async {
+///             Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
+///         }
+///     ).await?;
 ///
+///     println!("Fetch https://www.rust-lang.org successfully!");
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExponentialBackoff {
     jitter: bool,
     factor: f32,
