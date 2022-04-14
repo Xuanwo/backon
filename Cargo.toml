@@ -1,6 +1,6 @@
 [package]
 authors = ["Xuanwo <github@xuanwo.io>"]
-description = "Backoff policies"
+description = "Retry futures in backoff without effort."
 documentation = "https://docs.rs/backon"
 edition = "2021"
 license = "Apache-2.0"

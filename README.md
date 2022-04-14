@@ -5,6 +5,10 @@
 [Latest Version]: https://img.shields.io/crates/v/backon.svg
 [crates.io]: https://crates.io/crates/backon
 
+Retry futures in backoff without effort.
+
+---
+
 The opposite backoff implementation of the popular [backoff](https://docs.rs/backoff).
 
 - Newer: developed by Rust edition 2021 and latest stable.
