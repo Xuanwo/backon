@@ -167,7 +167,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_retry_x() -> anyhow::Result<()> {
+    async fn test_retry() -> anyhow::Result<()> {
         let result = always_error
             .retry(ExponentialBackoff::default().with_min_delay(Duration::from_millis(1)))
             .await;

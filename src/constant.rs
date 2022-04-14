@@ -26,6 +26,7 @@ use std::time::Duration;
 ///     Ok(())
 /// }
 /// ```
+#[derive(Debug, Clone)]
 pub struct ConstantBackoff {
     delay: Duration,
     max_times: Option<usize>,
