@@ -1,15 +1,14 @@
-use crate::{ExponentialBackoff, Policy};
+use crate::Backoff;
 use futures::ready;
 use pin_project::pin_project;
-use std::env::Args;
+
 use std::future::Future;
-use std::mem;
+
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use std::time::Duration;
 
-trait Retryable<
-    P: Policy,
+pub trait Retryable<
+    P: Backoff,
     T,
     E,
     Fut: Future<Output = std::result::Result<T, E>>,
@@ -21,7 +20,7 @@ trait Retryable<
 
 impl<P, T, E, Fut, FutureFn> Retryable<P, T, E, Fut, FutureFn> for FutureFn
 where
-    P: Policy,
+    P: Backoff,
     Fut: Future<Output = std::result::Result<T, E>>,
     FutureFn: FnMut() -> Fut,
 {
@@ -36,8 +35,8 @@ where
 }
 
 #[pin_project]
-struct Retry<
-    P: Policy,
+pub struct Retry<
+    P: Backoff,
     T,
     E,
     Fut: Future<Output = std::result::Result<T, E>>,
@@ -57,7 +56,7 @@ enum State<T, E, Fut: Future<Output = std::result::Result<T, E>>> {
 
     Polling(#[pin] Fut),
     // TODO: we need to support other sleeper
-    Sleeping(#[pin] tokio::time::Sleep),
+    Sleeping(#[pin] Pin<Box<tokio::time::Sleep>>),
 }
 
 impl<T, E, Fut> Default for State<T, E, Fut>
@@ -71,13 +70,13 @@ where
 
 impl<P, T, E, Fut, FutureFn> Future for Retry<P, T, E, Fut, FutureFn>
 where
-    P: Policy,
+    P: Backoff,
     Fut: Future<Output = std::result::Result<T, E>>,
     FutureFn: FnMut() -> Fut,
 {
     type Output = std::result::Result<T, E>;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut this = self.project();
         loop {
             let state = this.state.as_mut().project();
@@ -93,7 +92,8 @@ where
                     Err(err) => match this.backoff.next() {
                         None => return Poll::Ready(Err(err)),
                         Some(dur) => {
-                            this.state.set(State::Sleeping(tokio::time::sleep(dur)));
+                            this.state
+                                .set(State::Sleeping(Box::pin(tokio::time::sleep(dur))));
                             continue;
                         }
                     },
@@ -108,43 +108,10 @@ where
     }
 }
 
-pub async fn retry<B, T, E, FUT, FF, FE, FS, FSF>(
-    mut backoff: B,
-    mut sleep_fn: FS,
-    mut error_fn: FE,
-    mut future_fn: FF,
-) -> std::result::Result<T, E>
-where
-    B: Policy,
-    FF: FnMut() -> FUT,
-    FE: FnMut(&E) -> bool,
-    FS: FnMut(Duration) -> FSF,
-    FUT: Future<Output = std::result::Result<T, E>>,
-    FSF: Future<Output = ()>,
-{
-    loop {
-        match (future_fn)().await {
-            Ok(v) => return Ok(v),
-            Err(err) => {
-                if !(error_fn)(&err) {
-                    return Err(err);
-                }
-
-                match backoff.next() {
-                    None => return Err(err),
-                    Some(dur) => {
-                        (sleep_fn)(dur).await;
-                        continue;
-                    }
-                }
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::exponential::ExponentialBackoff;
 
     #[tokio::test]
     async fn test_retry() -> anyhow::Result<()> {
