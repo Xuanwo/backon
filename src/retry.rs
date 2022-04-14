@@ -97,10 +97,15 @@ pub struct Retry<
     state: State<T, E, Fut>,
 }
 
+/// State maintains internal state of retry.
+///
+/// # Notes
+///
+/// `tokio::time::Sleep` is a very struct that occupy 640B, so we wrap it
+/// into a `Pin<Box<_>>` to avoid this enum too large.
 #[pin_project(project = StateProject)]
 enum State<T, E, Fut: Future<Output = std::result::Result<T, E>>> {
     Idle,
-
     Polling(#[pin] Fut),
     // TODO: we need to support other sleeper
     Sleeping(#[pin] Pin<Box<tokio::time::Sleep>>),
@@ -130,7 +135,6 @@ where
             match state {
                 StateProject::Idle => {
                     let fut = (this.future_fn)();
-                    // this.state = State::Polling(fut);
                     this.state.set(State::Polling(fut));
                     continue;
                 }
