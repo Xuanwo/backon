@@ -1,19 +1,19 @@
 [package]
+authors = ["Xuanwo <github@xuanwo.io>"]
+description = "Backoff policies"
+documentation = "https://docs.rs/backon"
+edition = "2021"
+license = "Apache-2.0"
 name = "backon"
 version = "0.0.0"
-edition = "2021"
-authors = ["Xuanwo <github@xuanwo.io>"]
-license = "Apache-2.0"
-documentation = "https://docs.rs/backon"
-description = "Backoff policies"
 
 [dependencies]
-rand = "0.8.5"
 futures = "0.3.21"
-tokio = { version = "1.17.0", features = ["time"] }
 pin-project = "1.0.10"
+rand = "0.8.5"
+tokio = { version = "1.17.0", features = ["time"] }
 
 [dev-dependencies]
-tokio = { version = "1.17.0", features = ["full"] }
-reqwest = "0.11.10"
 anyhow = "1.0.56"
+reqwest = "0.11.10"
+tokio = { version = "1.17.0", features = ["full"] }
