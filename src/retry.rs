@@ -85,7 +85,7 @@ pub struct Retry<
     FutureFn: FnMut() -> Fut,
 > {
     backoff: B,
-    error_fn: fn(&E) -> bool,
+    retryable: fn(&E) -> bool,
     future_fn: FutureFn,
 
     #[pin]
@@ -123,13 +123,15 @@ where
     pub fn new(future_fn: FutureFn, backoff: B) -> Self {
         Retry {
             backoff,
-            error_fn: |_: &E| true,
+            retryable: |_: &E| true,
             future_fn,
             state: State::Idle,
         }
     }
 
-    /// Set error_fn of retry
+    /// Set the conditions for retrying.
+    ///
+    /// If not specifed, we treat all errors as retryable.
     ///
     /// # Examples
     ///
@@ -152,8 +154,39 @@ where
     ///     Ok(())
     /// }
     /// ```
+    #[deprecated(since = "0.0.3", note = "please use `Retry::when` instead")]
     pub fn with_error_fn(mut self, error_fn: fn(&E) -> bool) -> Self {
-        self.error_fn = error_fn;
+        self.retryable = error_fn;
+        self
+    }
+
+    /// Set the conditions for retrying.
+    ///
+    /// If not specifed, we treat all errors as retryable.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use backon::Retry;
+    /// use backon::ExponentialBackoff;
+    /// use anyhow::Result;
+    ///
+    /// async fn fetch() -> Result<String> {
+    ///     Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
+    /// }
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<()> {
+    ///     let retry = Retry::new(fetch, ExponentialBackoff::default())
+    ///             .when(|e| e.to_string() == "EOF");
+    ///     let content = retry.await?;
+    ///     println!("fetch succeeded: {}", content);
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn when(mut self, retryable: fn(&E) -> bool) -> Self {
+        self.retryable = retryable;
         self
     }
 }
@@ -203,7 +236,7 @@ where
                     Ok(v) => return Poll::Ready(Ok(v)),
                     Err(err) => {
                         // If input error is not retryable, return error directly.
-                        if !(this.error_fn)(&err) {
+                        if !(this.retryable)(&err) {
                             return Poll::Ready(Err(err));
                         }
                         match this.backoff.next() {
@@ -263,7 +296,7 @@ mod tests {
         let result = f
             .retry(backoff)
             // Only retry If error message is `retryable`
-            .with_error_fn(|e| e.to_string() == "retryable")
+            .when(|e| e.to_string() == "retryable")
             .await;
 
         assert!(result.is_err());
@@ -288,7 +321,7 @@ mod tests {
         let result = f
             .retry(backoff)
             // Only retry If error message is `retryable`
-            .with_error_fn(|e| e.to_string() == "retryable")
+            .when(|e| e.to_string() == "retryable")
             .await;
 
         assert!(result.is_err());
