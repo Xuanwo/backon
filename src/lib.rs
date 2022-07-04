@@ -50,7 +50,7 @@
 //! async fn main() -> Result<()> {
 //!     let content = fetch
 //!         .retry(ExponentialBackoff::default())
-//!         .with_error_fn(|e| e.to_string() == "retryable").await?;
+//!         .when(|e| e.to_string() == "retryable").await?;
 //!
 //!     println!("fetch succeeded: {}", content);
 //!     Ok(())
