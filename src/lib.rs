@@ -57,6 +57,9 @@
 //! }
 //! ```
 
+#![deny(missing_docs)]
+#![deny(unused_qualifications)]
+
 mod backoff;
 pub use backoff::Backoff;
 

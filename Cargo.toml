@@ -5,15 +5,15 @@ documentation = "https://docs.rs/backon"
 edition = "2021"
 license = "Apache-2.0"
 name = "backon"
-version = "0.0.2"
+version = "0.1.0"
 
 [dependencies]
-futures = "0.3.21"
-pin-project = "1.0.10"
-rand = "0.8.5"
-tokio = { version = "1.17.0", features = ["time"] }
+futures = "0.3"
+pin-project = "1"
+rand = "0.8"
+tokio = { version = "1", features = ["time"] }
 
 [dev-dependencies]
-anyhow = "1.0.56"
-reqwest = "0.11.10"
-tokio = { version = "1.17.0", features = ["full"] }
+anyhow = "1"
+reqwest = "0.11"
+tokio = { version = "1", features = ["full"] }
