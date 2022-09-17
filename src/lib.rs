@@ -18,12 +18,15 @@
 //! Retry with default settings.
 //!
 //! ```no_run
-//! use backon::Retryable;
-//! use backon::ExponentialBackoff;
 //! use anyhow::Result;
+//! use backon::ExponentialBackoff;
+//! use backon::Retryable;
 //!
 //! async fn fetch() -> Result<String> {
-//!     Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
+//!     Ok(reqwest::get("https://www.rust-lang.org")
+//!         .await?
+//!         .text()
+//!         .await?)
 //! }
 //!
 //! #[tokio::main]
@@ -38,19 +41,23 @@
 //! Retry with specify retryable error.
 //!
 //! ```no_run
-//! use backon::Retryable;
-//! use backon::ExponentialBackoff;
 //! use anyhow::Result;
+//! use backon::ExponentialBackoff;
+//! use backon::Retryable;
 //!
 //! async fn fetch() -> Result<String> {
-//!     Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
+//!     Ok(reqwest::get("https://www.rust-lang.org")
+//!         .await?
+//!         .text()
+//!         .await?)
 //! }
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
 //!     let content = fetch
 //!         .retry(ExponentialBackoff::default())
-//!         .when(|e| e.to_string() == "retryable").await?;
+//!         .when(|e| e.to_string() == "retryable")
+//!         .await?;
 //!
 //!     println!("fetch succeeded: {}", content);
 //!     Ok(())

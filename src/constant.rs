@@ -10,12 +10,15 @@ use std::time::Duration;
 /// # Examples
 ///
 /// ```no_run
-/// use backon::Retryable;
-/// use backon::ConstantBackoff;
 /// use anyhow::Result;
+/// use backon::ConstantBackoff;
+/// use backon::Retryable;
 ///
 /// async fn fetch() -> Result<String> {
-///     Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
+///     Ok(reqwest::get("https://www.rust-lang.org")
+///         .await?
+///         .text()
+///         .await?)
 /// }
 ///
 /// #[tokio::main]

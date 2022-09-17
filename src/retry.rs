@@ -4,6 +4,7 @@ use pin_project::pin_project;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
+use std::time::Duration;
 
 use crate::Backoff;
 
@@ -38,12 +39,15 @@ use crate::Backoff;
 /// # Example
 ///
 /// ```no_run
-/// use backon::Retryable;
-/// use backon::ExponentialBackoff;
 /// use anyhow::Result;
+/// use backon::ExponentialBackoff;
+/// use backon::Retryable;
 ///
 /// async fn fetch() -> Result<String> {
-///     Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
+///     Ok(reqwest::get("https://www.rust-lang.org")
+///         .await?
+///         .text()
+///         .await?)
 /// }
 ///
 /// #[tokio::main]
@@ -76,6 +80,7 @@ where
 pub struct Retry<B: Backoff, T, E, Fut: Future<Output = Result<T, E>>, FutureFn: FnMut() -> Fut> {
     backoff: B,
     retryable: fn(&E) -> bool,
+    notify: fn(&E, Duration),
     future_fn: FutureFn,
 
     #[pin]
@@ -93,13 +98,16 @@ where
     /// # Examples
     ///
     /// ```no_run
-    /// use backon::Retryable;
-    /// use backon::Retry;
-    /// use backon::ExponentialBackoff;
     /// use anyhow::Result;
+    /// use backon::ExponentialBackoff;
+    /// use backon::Retry;
+    /// use backon::Retryable;
     ///
     /// async fn fetch() -> Result<String> {
-    ///     Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
+    ///     Ok(reqwest::get("https://www.rust-lang.org")
+    ///         .await?
+    ///         .text()
+    ///         .await?)
     /// }
     ///
     /// #[tokio::main]
@@ -114,6 +122,7 @@ where
         Retry {
             backoff,
             retryable: |_: &E| true,
+            notify: |_: &E, _: Duration| {},
             future_fn,
             state: State::Idle,
         }
@@ -126,18 +135,21 @@ where
     /// # Examples
     ///
     /// ```no_run
-    /// use backon::Retry;
-    /// use backon::ExponentialBackoff;
     /// use anyhow::Result;
+    /// use backon::ExponentialBackoff;
+    /// use backon::Retry;
     ///
     /// async fn fetch() -> Result<String> {
-    ///     Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
+    ///     Ok(reqwest::get("https://www.rust-lang.org")
+    ///         .await?
+    ///         .text()
+    ///         .await?)
     /// }
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<()> {
-    ///     let retry = Retry::new(fetch, ExponentialBackoff::default())
-    ///             .when(|e| e.to_string() == "EOF");
+    ///     let retry =
+    ///         Retry::new(fetch, ExponentialBackoff::default()).when(|e| e.to_string() == "EOF");
     ///     let content = retry.await?;
     ///     println!("fetch succeeded: {}", content);
     ///
@@ -146,6 +158,43 @@ where
     /// ```
     pub fn when(mut self, retryable: fn(&E) -> bool) -> Self {
         self.retryable = retryable;
+        self
+    }
+
+    /// Set to notify for everything retrying.
+    ///
+    /// If not specified, this is a no-op.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use anyhow::Result;
+    /// use backon::ExponentialBackoff;
+    /// use backon::Retry;
+    /// use std::time::Duration;
+    ///
+    /// async fn fetch() -> Result<String> {
+    ///     Ok(reqwest::get("https://www.rust-lang.org")
+    ///         .await?
+    ///         .text()
+    ///         .await?)
+    /// }
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<()> {
+    ///     let retry = Retry::new(fetch, ExponentialBackoff::default()).notify(
+    ///         |err: &anyhow::Error, dur: Duration| {
+    ///             println!("retrying error {:?} with sleeping {:?}", err, dur);
+    ///         },
+    ///     );
+    ///     let content = retry.await?;
+    ///     println!("fetch succeeded: {}", content);
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn notify(mut self, notify: fn(&E, Duration)) -> Self {
+        self.notify = notify;
         self
     }
 }
@@ -201,6 +250,7 @@ where
                         match this.backoff.next() {
                             None => return Poll::Ready(Err(err)),
                             Some(dur) => {
+                                (this.notify)(&err, dur);
                                 this.state
                                     .set(State::Sleeping(Box::pin(tokio::time::sleep(dur))));
                                 continue;
