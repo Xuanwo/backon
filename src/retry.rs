@@ -121,38 +121,7 @@ where
 
     /// Set the conditions for retrying.
     ///
-    /// If not specifed, we treat all errors as retryable.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use backon::Retry;
-    /// use backon::ExponentialBackoff;
-    /// use anyhow::Result;
-    ///
-    /// async fn fetch() -> Result<String> {
-    ///     Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
-    /// }
-    ///
-    /// #[tokio::main]
-    /// async fn main() -> Result<()> {
-    ///     let retry = Retry::new(fetch, ExponentialBackoff::default())
-    ///             .with_error_fn(|e| e.to_string() == "EOF");
-    ///     let content = retry.await?;
-    ///     println!("fetch succeeded: {}", content);
-    ///
-    ///     Ok(())
-    /// }
-    /// ```
-    #[deprecated(since = "0.0.3", note = "please use `Retry::when` instead")]
-    pub fn with_error_fn(mut self, error_fn: fn(&E) -> bool) -> Self {
-        self.retryable = error_fn;
-        self
-    }
-
-    /// Set the conditions for retrying.
-    ///
-    /// If not specifed, we treat all errors as retryable.
+    /// If not specified, we treat all errors as retryable.
     ///
     /// # Examples
     ///
