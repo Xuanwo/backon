@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-/// ConstantBackoff provides backoff with constant delay and limited times.
+use crate::backoff::BackoffBuilder;
+
+/// ConstantBuilder is used to build [`ConstantBackoff`]
 ///
 /// # Default
 ///
@@ -11,7 +13,7 @@ use std::time::Duration;
 ///
 /// ```no_run
 /// use anyhow::Result;
-/// use backon::ConstantBackoff;
+/// use backon::ConstantBuilder;
 /// use backon::Retryable;
 ///
 /// async fn fetch() -> Result<String> {
@@ -23,12 +25,55 @@ use std::time::Duration;
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<()> {
-///     let content = fetch.retry(ConstantBackoff::default()).await?;
+///     let content = fetch.retry(ConstantBuilder::default()).await?;
 ///     println!("fetch succeeded: {}", content);
 ///
 ///     Ok(())
 /// }
 /// ```
+#[derive(Debug)]
+pub struct ConstantBuilder {
+    delay: Duration,
+    max_times: Option<usize>,
+}
+
+impl Default for ConstantBuilder {
+    fn default() -> Self {
+        Self {
+            delay: Duration::from_secs(1),
+            max_times: Some(3),
+        }
+    }
+}
+
+impl ConstantBuilder {
+    /// Set delay of current backoff.
+    pub fn with_delay(mut self, delay: Duration) -> Self {
+        self.delay = delay;
+        self
+    }
+
+    /// Set max times of current backoff.
+    pub fn with_max_times(mut self, max_times: usize) -> Self {
+        self.max_times = Some(max_times);
+        self
+    }
+}
+
+impl BackoffBuilder for ConstantBuilder {
+    type Backoff = ConstantBackoff;
+
+    fn build(&self) -> Self::Backoff {
+        ConstantBackoff {
+            delay: self.delay,
+            max_times: self.max_times,
+
+            attempts: 0,
+        }
+    }
+}
+
+/// ConstantBackoff provides backoff with constant delay and limited times.
 #[derive(Debug)]
 pub struct ConstantBackoff {
     delay: Duration,
@@ -44,20 +89,6 @@ impl Default for ConstantBackoff {
             max_times: Some(3),
             attempts: 0,
         }
-    }
-}
-
-impl ConstantBackoff {
-    /// Set delay of current backoff.
-    pub fn with_delay(mut self, delay: Duration) -> Self {
-        self.delay = delay;
-        self
-    }
-
-    /// Set max times of current backoff.
-    pub fn with_max_times(mut self, max_times: usize) -> Self {
-        self.max_times = Some(max_times);
-        self
     }
 }
 
@@ -81,12 +112,14 @@ impl Iterator for ConstantBackoff {
 
 #[cfg(test)]
 mod tests {
-    use crate::ConstantBackoff;
     use std::time::Duration;
+
+    use crate::backoff::BackoffBuilder;
+    use crate::constant::ConstantBuilder;
 
     #[test]
     fn test_constant_default() {
-        let mut exp = ConstantBackoff::default();
+        let mut exp = ConstantBuilder::default().build();
 
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
@@ -96,7 +129,9 @@ mod tests {
 
     #[test]
     fn test_constant_with_delay() {
-        let mut exp = ConstantBackoff::default().with_delay(Duration::from_secs(2));
+        let mut exp = ConstantBuilder::default()
+            .with_delay(Duration::from_secs(2))
+            .build();
 
         assert_eq!(Some(Duration::from_secs(2)), exp.next());
         assert_eq!(Some(Duration::from_secs(2)), exp.next());
@@ -106,7 +141,7 @@ mod tests {
 
     #[test]
     fn test_constant_with_times() {
-        let mut exp = ConstantBackoff::default().with_max_times(1);
+        let mut exp = ConstantBuilder::default().with_max_times(1).build();
 
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
         assert_eq!(None, exp.next());

@@ -19,7 +19,7 @@
 //!
 //! ```no_run
 //! use anyhow::Result;
-//! use backon::ExponentialBackoff;
+//! use backon::ExponentialBuilder;
 //! use backon::Retryable;
 //!
 //! async fn fetch() -> Result<String> {
@@ -31,7 +31,7 @@
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
-//!     let content = fetch.retry(ExponentialBackoff::default()).await?;
+//!     let content = fetch.retry(ExponentialBuilder::default()).await?;
 //!
 //!     println!("fetch succeeded: {}", content);
 //!     Ok(())
@@ -42,7 +42,7 @@
 //!
 //! ```no_run
 //! use anyhow::Result;
-//! use backon::ExponentialBackoff;
+//! use backon::ExponentialBuilder;
 //! use backon::Retryable;
 //!
 //! async fn fetch() -> Result<String> {
@@ -55,7 +55,7 @@
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
 //!     let content = fetch
-//!         .retry(ExponentialBackoff::default())
+//!         .retry(ExponentialBuilder::default())
 //!         .when(|e| e.to_string() == "retryable")
 //!         .await?;
 //!
@@ -69,13 +69,20 @@
 
 mod backoff;
 pub use backoff::Backoff;
+pub use backoff::BackoffBuilder;
 
 mod constant;
 pub use constant::ConstantBackoff;
+pub use constant::ConstantBuilder;
 
 mod exponential;
 pub use exponential::ExponentialBackoff;
+pub use exponential::ExponentialBuilder;
 
 mod retry;
 pub use retry::Retry;
 pub use retry::Retryable;
+
+mod blocking_retry;
+pub use blocking_retry::BlockingRetry;
+pub use blocking_retry::BlockingRetryable;
