@@ -29,7 +29,7 @@ fn fetch() -> Result<String> {
 }
 
 fn main() -> Result<()> {
-    let content = fetch.retry(ExponentialBuilder::default()).call()?;
+    let content = fetch.retry(&ExponentialBuilder::default()).call()?;
     println!("fetch succeeded: {}", content);
 
     Ok(())
@@ -49,7 +49,7 @@ async fn fetch() -> Result<String> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let content = fetch.retry(ExponentialBackoff::default()).await?;
+    let content = fetch.retry(&ExponentialBackoff::default()).await?;
     println!("fetch succeeded: {}", content);
 
     Ok(())
