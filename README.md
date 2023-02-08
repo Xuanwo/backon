@@ -1,6 +1,6 @@
 # backon &emsp; [![Build Status]][actions] [![Latest Version]][crates.io]
 
-[Build Status]: https://img.shields.io/github/workflow/status/Xuanwo/backon/CI/main
+[Build Status]: https://img.shields.io/github/actions/workflow/status/Xuanwo/backon/ci.yml?branch=main
 [actions]: https://github.com/Xuanwo/backon/actions?query=branch%3Amain
 [Latest Version]: https://img.shields.io/crates/v/backon.svg
 [crates.io]: https://crates.io/crates/backon

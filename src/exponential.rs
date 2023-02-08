@@ -181,16 +181,16 @@ mod tests {
         let mut exp = ExponentialBackoff::default().with_jitter();
 
         let v = exp.next().expect("value must valid");
-        assert!(v >= Duration::from_secs(1), "current: {:?}", v);
-        assert!(v < Duration::from_secs(2), "current: {:?}", v);
+        assert!(v >= Duration::from_secs(1), "current: {v:?}");
+        assert!(v < Duration::from_secs(2), "current: {v:?}");
 
         let v = exp.next().expect("value must valid");
-        assert!(v >= Duration::from_secs(2), "current: {:?}", v);
-        assert!(v < Duration::from_secs(4), "current: {:?}", v);
+        assert!(v >= Duration::from_secs(2), "current: {v:?}");
+        assert!(v < Duration::from_secs(4), "current: {v:?}");
 
         let v = exp.next().expect("value must valid");
-        assert!(v >= Duration::from_secs(4), "current: {:?}", v);
-        assert!(v < Duration::from_secs(8), "current: {:?}", v);
+        assert!(v >= Duration::from_secs(4), "current: {v:?}");
+        assert!(v < Duration::from_secs(8), "current: {v:?}");
 
         assert_eq!(None, exp.next());
     }
