@@ -36,7 +36,7 @@ use crate::backoff::BackoffBuilder;
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExponentialBuilder {
     jitter: bool,
     factor: f32,

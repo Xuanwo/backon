@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::time::Duration;
 
 /// BackoffBuilder is used to build a new backoff.
-pub trait BackoffBuilder: Default + Debug + Send + Sync + Unpin {
+pub trait BackoffBuilder: Clone + Debug + Send + Sync + Unpin {
     /// The associated backoff that returned by this builder.
     type Backoff: Backoff;
 

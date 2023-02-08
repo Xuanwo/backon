@@ -31,7 +31,7 @@ use crate::backoff::BackoffBuilder;
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConstantBuilder {
     delay: Duration,
     max_times: Option<usize>,
