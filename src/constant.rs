@@ -25,7 +25,7 @@ use crate::backoff::BackoffBuilder;
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<()> {
-///     let content = fetch.retry(ConstantBuilder::default()).await?;
+///     let content = fetch.retry(&ConstantBuilder::default()).await?;
 ///     println!("fetch succeeded: {}", content);
 ///
 ///     Ok(())
