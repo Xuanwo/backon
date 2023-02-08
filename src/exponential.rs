@@ -33,7 +33,7 @@ use std::time::Duration;
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ExponentialBackoff {
     jitter: bool,
     factor: f32,
