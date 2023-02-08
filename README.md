@@ -5,7 +5,7 @@
 [Latest Version]: https://img.shields.io/crates/v/backon.svg
 [crates.io]: https://crates.io/crates/backon
 
-Retry futures in backoff without effort.
+Retry with backoff without effort.
 
 ---
 
