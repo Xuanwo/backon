@@ -1,11 +1,13 @@
+use std::future::Future;
+use std::pin::Pin;
+use std::task::Context;
+use std::task::Poll;
+use std::time::Duration;
+
 use futures::ready;
 use pin_project::pin_project;
 
-use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use std::time::Duration;
-
+use crate::backoff::BackoffBuilder;
 use crate::Backoff;
 
 /// Retryable will add retry support for functions that produces a futures with results.
@@ -40,7 +42,7 @@ use crate::Backoff;
 ///
 /// ```no_run
 /// use anyhow::Result;
-/// use backon::ExponentialBackoff;
+/// use backon::ExponentialBuilder;
 /// use backon::Retryable;
 ///
 /// async fn fetch() -> Result<String> {
@@ -52,26 +54,32 @@ use crate::Backoff;
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<()> {
-///     let content = fetch.retry(ExponentialBackoff::default()).await?;
+///     let content = fetch.retry(ExponentialBuilder::default()).await?;
 ///     println!("fetch succeeded: {}", content);
 ///
 ///     Ok(())
 /// }
 /// ```
-pub trait Retryable<B: Backoff, T, E, Fut: Future<Output = Result<T, E>>, FutureFn: FnMut() -> Fut>
+pub trait Retryable<
+    B: BackoffBuilder,
+    T,
+    E,
+    Fut: Future<Output = Result<T, E>>,
+    FutureFn: FnMut() -> Fut,
+>
 {
     /// Generate a new retry
-    fn retry(self, backoff: B) -> Retry<B, T, E, Fut, FutureFn>;
+    fn retry(self, builder: B) -> Retry<B::Backoff, T, E, Fut, FutureFn>;
 }
 
 impl<B, T, E, Fut, FutureFn> Retryable<B, T, E, Fut, FutureFn> for FutureFn
 where
-    B: Backoff,
+    B: BackoffBuilder,
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
 {
-    fn retry(self, backoff: B) -> Retry<B, T, E, Fut, FutureFn> {
-        Retry::new(self, backoff)
+    fn retry(self, builder: B) -> Retry<B::Backoff, T, E, Fut, FutureFn> {
+        Retry::new(self, builder.build())
     }
 }
 
@@ -94,31 +102,7 @@ where
     FutureFn: FnMut() -> Fut,
 {
     /// Create a new retry.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use anyhow::Result;
-    /// use backon::ExponentialBackoff;
-    /// use backon::Retry;
-    /// use backon::Retryable;
-    ///
-    /// async fn fetch() -> Result<String> {
-    ///     Ok(reqwest::get("https://www.rust-lang.org")
-    ///         .await?
-    ///         .text()
-    ///         .await?)
-    /// }
-    ///
-    /// #[tokio::main]
-    /// async fn main() -> Result<()> {
-    ///     let content = Retry::new(fetch, ExponentialBackoff::default()).await?;
-    ///     println!("fetch succeeded: {}", content);
-    ///
-    ///     Ok(())
-    /// }
-    /// ```
-    pub fn new(future_fn: FutureFn, backoff: B) -> Self {
+    fn new(future_fn: FutureFn, backoff: B) -> Self {
         Retry {
             backoff,
             retryable: |_: &E| true,
@@ -136,8 +120,8 @@ where
     ///
     /// ```no_run
     /// use anyhow::Result;
-    /// use backon::ExponentialBackoff;
-    /// use backon::Retry;
+    /// use backon::ExponentialBuilder;
+    /// use backon::Retryable;
     ///
     /// async fn fetch() -> Result<String> {
     ///     Ok(reqwest::get("https://www.rust-lang.org")
@@ -148,9 +132,10 @@ where
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<()> {
-    ///     let retry =
-    ///         Retry::new(fetch, ExponentialBackoff::default()).when(|e| e.to_string() == "EOF");
-    ///     let content = retry.await?;
+    ///     let content = fetch
+    ///         .retry(ExponentialBuilder::default())
+    ///         .when(|e| e.to_string() == "EOF")
+    ///         .await?;
     ///     println!("fetch succeeded: {}", content);
     ///
     ///     Ok(())
@@ -168,10 +153,11 @@ where
     /// # Examples
     ///
     /// ```no_run
-    /// use anyhow::Result;
-    /// use backon::ExponentialBackoff;
-    /// use backon::Retry;
     /// use std::time::Duration;
+    ///
+    /// use anyhow::Result;
+    /// use backon::ExponentialBuilder;
+    /// use backon::Retryable;
     ///
     /// async fn fetch() -> Result<String> {
     ///     Ok(reqwest::get("https://www.rust-lang.org")
@@ -182,12 +168,12 @@ where
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<()> {
-    ///     let retry = Retry::new(fetch, ExponentialBackoff::default()).notify(
-    ///         |err: &anyhow::Error, dur: Duration| {
+    ///     let content = fetch
+    ///         .retry(ExponentialBuilder::default())
+    ///         .notify(|err: &anyhow::Error, dur: Duration| {
     ///             println!("retrying error {:?} with sleeping {:?}", err, dur);
-    ///         },
-    ///     );
-    ///     let content = retry.await?;
+    ///         })
+    ///         .await?;
     ///     println!("fetch succeeded: {}", content);
     ///
     ///     Ok(())
@@ -271,10 +257,11 @@ where
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
+
     use tokio::sync::Mutex;
 
     use super::*;
-    use crate::exponential::ExponentialBackoff;
+    use crate::exponential::ExponentialBuilder;
 
     async fn always_error() -> anyhow::Result<()> {
         Err(anyhow::anyhow!("test_query meets error"))
@@ -283,7 +270,7 @@ mod tests {
     #[tokio::test]
     async fn test_retry() -> anyhow::Result<()> {
         let result = always_error
-            .retry(ExponentialBackoff::default().with_min_delay(Duration::from_millis(1)))
+            .retry(ExponentialBuilder::default().with_min_delay(Duration::from_millis(1)))
             .await;
 
         assert!(result.is_err());
@@ -301,7 +288,7 @@ mod tests {
             Err::<(), anyhow::Error>(anyhow::anyhow!("not retryable"))
         };
 
-        let backoff = ExponentialBackoff::default().with_min_delay(Duration::from_millis(1));
+        let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_millis(1));
         let result = f
             .retry(backoff)
             // Only retry If error message is `retryable`
@@ -326,7 +313,7 @@ mod tests {
             Err::<(), anyhow::Error>(anyhow::anyhow!("retryable"))
         };
 
-        let backoff = ExponentialBackoff::default().with_min_delay(Duration::from_millis(1));
+        let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_millis(1));
         let result = f
             .retry(backoff)
             // Only retry If error message is `retryable`

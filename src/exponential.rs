@@ -1,7 +1,10 @@
-use rand::Rng;
 use std::time::Duration;
 
-/// Exponential backoff implementation.
+use rand::Rng;
+
+use crate::backoff::BackoffBuilder;
+
+/// ExponentialBuilder is used to build a [`ExponentialBackoff`]
 ///
 /// # Default
 ///
@@ -15,7 +18,7 @@ use std::time::Duration;
 ///
 /// ```no_run
 /// use anyhow::Result;
-/// use backon::ExponentialBackoff;
+/// use backon::ExponentialBuilder;
 /// use backon::Retryable;
 ///
 /// async fn fetch() -> Result<String> {
@@ -27,25 +30,22 @@ use std::time::Duration;
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<()> {
-///     let content = fetch.retry(ExponentialBackoff::default()).await?;
+///     let content = fetch.retry(ExponentialBuilder::default()).await?;
 ///     println!("fetch succeeded: {}", content);
 ///
 ///     Ok(())
 /// }
 /// ```
 #[derive(Debug)]
-pub struct ExponentialBackoff {
+pub struct ExponentialBuilder {
     jitter: bool,
     factor: f32,
     min_delay: Duration,
     max_delay: Option<Duration>,
     max_times: Option<usize>,
-
-    current_delay: Option<Duration>,
-    attempts: usize,
 }
 
-impl Default for ExponentialBackoff {
+impl Default for ExponentialBuilder {
     fn default() -> Self {
         Self {
             jitter: false,
@@ -53,14 +53,11 @@ impl Default for ExponentialBackoff {
             min_delay: Duration::from_secs(1),
             max_delay: Some(Duration::from_secs(60)),
             max_times: Some(3),
-
-            current_delay: None,
-            attempts: 0,
         }
     }
 }
 
-impl ExponentialBackoff {
+impl ExponentialBuilder {
     /// Set jitter of current backoff.
     ///
     /// If jitter is enabled, ExponentialBackoff will add a random jitter in `[0, min_delay)
@@ -103,6 +100,36 @@ impl ExponentialBackoff {
         self.max_times = Some(max_times);
         self
     }
+}
+
+impl BackoffBuilder for ExponentialBuilder {
+    type Backoff = ExponentialBackoff;
+
+    fn build(&self) -> Self::Backoff {
+        ExponentialBackoff {
+            jitter: self.jitter,
+            factor: self.factor,
+            min_delay: self.min_delay,
+            max_delay: self.max_delay,
+            max_times: self.max_times,
+
+            current_delay: None,
+            attempts: 0,
+        }
+    }
+}
+
+/// Exponential backoff implementation.
+#[derive(Debug)]
+pub struct ExponentialBackoff {
+    jitter: bool,
+    factor: f32,
+    min_delay: Duration,
+    max_delay: Option<Duration>,
+    max_times: Option<usize>,
+
+    current_delay: Option<Duration>,
+    attempts: usize,
 }
 
 impl Iterator for ExponentialBackoff {
@@ -153,12 +180,14 @@ impl Iterator for ExponentialBackoff {
 
 #[cfg(test)]
 mod tests {
-    use crate::exponential::ExponentialBackoff;
     use std::time::Duration;
+
+    use crate::backoff::BackoffBuilder;
+    use crate::exponential::ExponentialBuilder;
 
     #[test]
     fn test_exponential_default() {
-        let mut exp = ExponentialBackoff::default();
+        let mut exp = ExponentialBuilder::default().build();
 
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
         assert_eq!(Some(Duration::from_secs(2)), exp.next());
@@ -168,7 +197,7 @@ mod tests {
 
     #[test]
     fn test_exponential_factor() {
-        let mut exp = ExponentialBackoff::default().with_factor(1.5);
+        let mut exp = ExponentialBuilder::default().with_factor(1.5).build();
 
         assert_eq!(Some(Duration::from_secs_f32(1.0)), exp.next());
         assert_eq!(Some(Duration::from_secs_f32(1.5)), exp.next());
@@ -178,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_exponential_jitter() {
-        let mut exp = ExponentialBackoff::default().with_jitter();
+        let mut exp = ExponentialBuilder::default().with_jitter().build();
 
         let v = exp.next().expect("value must valid");
         assert!(v >= Duration::from_secs(1), "current: {v:?}");
@@ -197,7 +226,9 @@ mod tests {
 
     #[test]
     fn test_exponential_min_delay() {
-        let mut exp = ExponentialBackoff::default().with_min_delay(Duration::from_millis(500));
+        let mut exp = ExponentialBuilder::default()
+            .with_min_delay(Duration::from_millis(500))
+            .build();
 
         assert_eq!(Some(Duration::from_millis(500)), exp.next());
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
@@ -207,7 +238,9 @@ mod tests {
 
     #[test]
     fn test_exponential_max_delay() {
-        let mut exp = ExponentialBackoff::default().with_max_delay(Duration::from_secs(2));
+        let mut exp = ExponentialBuilder::default()
+            .with_max_delay(Duration::from_secs(2))
+            .build();
 
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
         assert_eq!(Some(Duration::from_secs(2)), exp.next());
@@ -217,7 +250,7 @@ mod tests {
 
     #[test]
     fn test_exponential_max_times() {
-        let mut exp = ExponentialBackoff::default().with_max_times(1);
+        let mut exp = ExponentialBuilder::default().with_max_times(1).build();
 
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
         assert_eq!(None, exp.next());
