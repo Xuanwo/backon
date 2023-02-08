@@ -17,10 +17,31 @@ The opposite backoff implementation of the popular [backoff](https://docs.rs/bac
 
 ## Quick Start
 
+Retry a blocking function.
+
 ```rust
-use backon::Retryable;
-use backon::ExponentialBackoff;
 use anyhow::Result;
+use backon::BlockingRetryable;
+use backon::ExponentialBuilder;
+
+fn fetch() -> Result<String> {
+     Ok("hello, world!".to_string())
+}
+
+fn main() -> Result<()> {
+    let content = fetch.retry(ExponentialBuilder::default()).call()?;
+    println!("fetch succeeded: {}", content);
+
+    Ok(())
+}
+```
+
+Retry an async function.
+
+```rust
+use anyhow::Result;
+use backon::ExponentialBackoff;
+use backon::Retryable;
 
 async fn fetch() -> Result<String> {
     Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
