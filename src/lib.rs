@@ -31,7 +31,7 @@
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
-//!     let content = fetch.retry(ExponentialBuilder::default()).await?;
+//!     let content = fetch.retry(&ExponentialBuilder::default()).await?;
 //!
 //!     println!("fetch succeeded: {}", content);
 //!     Ok(())
@@ -55,7 +55,7 @@
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
 //!     let content = fetch
-//!         .retry(ExponentialBuilder::default())
+//!         .retry(&ExponentialBuilder::default())
 //!         .when(|e| e.to_string() == "retryable")
 //!         .await?;
 //!
