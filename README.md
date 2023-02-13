@@ -40,7 +40,7 @@ Retry an async function.
 
 ```rust
 use anyhow::Result;
-use backon::ExponentialBackoff;
+use backon::ExponentialBuilder;
 use backon::Retryable;
 
 async fn fetch() -> Result<String> {
@@ -49,7 +49,7 @@ async fn fetch() -> Result<String> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let content = fetch.retry(&ExponentialBackoff::default()).await?;
+    let content = fetch.retry(&ExponentialBuilder::default()).await?;
     println!("fetch succeeded: {}", content);
 
     Ok(())
