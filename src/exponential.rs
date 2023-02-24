@@ -1,7 +1,5 @@
 use std::time::Duration;
 
-use rand::Rng;
-
 use crate::backoff::BackoffBuilder;
 
 /// ExponentialBuilder is used to build a [`ExponentialBackoff`]
@@ -149,9 +147,7 @@ impl Iterator for ExponentialBackoff {
 
                 // If jitter is enabled, add random jitter based on min delay.
                 if self.jitter {
-                    cur += self
-                        .min_delay
-                        .mul_f32(rand::thread_rng().gen_range(0.0..1.0));
+                    cur += self.min_delay.mul_f32(fastrand::f32());
                 }
 
                 Some(cur)
@@ -167,9 +163,7 @@ impl Iterator for ExponentialBackoff {
 
                 // If jitter is enabled, add random jitter based on min delay.
                 if self.jitter {
-                    cur += self
-                        .min_delay
-                        .mul_f32(rand::thread_rng().gen_range(0.0..1.0));
+                    cur += self.min_delay.mul_f32(fastrand::f32());
                 }
 
                 Some(cur)
