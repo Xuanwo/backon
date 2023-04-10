@@ -12,6 +12,7 @@
 //!
 //! - [`ConstantBackoff`]: backoff with constant delay and limited times.
 //! - [`ExponentialBackoff`]: backoff with exponential delay, also provides jitter supports.
+//! - [`FibonacciBackoff`]: backoff with fibonacci delay, also provides jitter supports.
 //!
 //! # Examples
 //!
@@ -78,6 +79,10 @@ pub use constant::ConstantBuilder;
 mod exponential;
 pub use exponential::ExponentialBackoff;
 pub use exponential::ExponentialBuilder;
+
+mod fibonacci;
+pub use fibonacci::FibonacciBackoff;
+pub use fibonacci::FibonacciBuilder;
 
 mod retry;
 pub use retry::Retry;

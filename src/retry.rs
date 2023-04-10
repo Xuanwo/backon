@@ -191,21 +191,14 @@ where
 ///
 /// `tokio::time::Sleep` is a very struct that occupy 640B, so we wrap it
 /// into a `Pin<Box<_>>` to avoid this enum too large.
+#[derive(Default)]
 #[pin_project(project = StateProject)]
 enum State<T, E, Fut: Future<Output = Result<T, E>>> {
+    #[default]
     Idle,
     Polling(#[pin] Fut),
     // TODO: we need to support other sleeper
     Sleeping(#[pin] Pin<Box<tokio::time::Sleep>>),
-}
-
-impl<T, E, Fut> Default for State<T, E, Fut>
-where
-    Fut: Future<Output = Result<T, E>>,
-{
-    fn default() -> Self {
-        State::Idle
-    }
 }
 
 impl<B, T, E, Fut, FutureFn> Future for Retry<B, T, E, Fut, FutureFn>
