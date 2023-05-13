@@ -61,7 +61,7 @@ where
 pub struct BlockingRetry<B: Backoff, T, E, F: FnMut() -> Result<T, E>> {
     backoff: B,
     retryable: fn(&E) -> bool,
-    notify: fn(&E, Duration),
+    notify: Box<dyn Fn(&E, Duration)>,
     f: F,
 }
 
@@ -75,7 +75,7 @@ where
         BlockingRetry {
             backoff,
             retryable: |_: &E| true,
-            notify: |_: &E, _: Duration| {},
+            notify: Box::new(|_: &E, _: Duration| {}),
             f,
         }
     }
@@ -140,8 +140,8 @@ where
     ///     Ok(())
     /// }
     /// ```
-    pub fn notify(mut self, notify: fn(&E, Duration)) -> Self {
-        self.notify = notify;
+    pub fn notify(mut self, notify: impl Fn(&E, Duration) + 'static) -> Self {
+        self.notify = Box::new(notify);
         self
     }
 

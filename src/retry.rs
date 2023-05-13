@@ -88,7 +88,7 @@ where
 pub struct Retry<B: Backoff, T, E, Fut: Future<Output = Result<T, E>>, FutureFn: FnMut() -> Fut> {
     backoff: B,
     retryable: fn(&E) -> bool,
-    notify: fn(&E, Duration),
+    notify: Box<dyn Fn(&E, Duration)>,
     future_fn: FutureFn,
 
     #[pin]
@@ -106,7 +106,7 @@ where
         Retry {
             backoff,
             retryable: |_: &E| true,
-            notify: |_: &E, _: Duration| {},
+            notify: Box::new(|_: &E, _: Duration| {}),
             future_fn,
             state: State::Idle,
         }
@@ -179,8 +179,8 @@ where
     ///     Ok(())
     /// }
     /// ```
-    pub fn notify(mut self, notify: fn(&E, Duration)) -> Self {
-        self.notify = notify;
+    pub fn notify<'s>(mut self, notify: impl Fn(&E, Duration) + 'static) -> Self {
+        self.notify = Box::new(notify);
         self
     }
 }
@@ -318,6 +318,31 @@ mod tests {
         // `f` always returns error "retryable", so it should be executed
         // 4 times (retry 3 times).
         assert_eq!(*error_times.lock().await, 4);
+        Ok(())
+    }
+
+
+    #[tokio::test]
+    async fn test_retry_with_notify() -> anyhow::Result<()> {
+        let v_lock = std::rc::Rc::new(std::sync::Mutex::new(0));
+
+        let f = || async {
+            Err::<(), anyhow::Error>(anyhow::anyhow!("not retryable"))
+        };
+
+        let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_millis(1));
+        let v_lock_copy = v_lock.clone();
+        let result = f
+            .retry(&backoff)
+            .notify(move |e, dur| {
+                assert_eq!("not retryable", e.to_string());
+                *v_lock_copy.lock().unwrap() += 1;
+                assert!(dur >= Duration::from_millis(1));
+            })
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(3, *v_lock.lock().unwrap());
         Ok(())
     }
 }
