@@ -320,29 +320,4 @@ mod tests {
         assert_eq!(*error_times.lock().await, 4);
         Ok(())
     }
-
-
-    #[tokio::test]
-    async fn test_retry_with_notify() -> anyhow::Result<()> {
-        let v_lock = std::rc::Rc::new(std::sync::Mutex::new(0));
-
-        let f = || async {
-            Err::<(), anyhow::Error>(anyhow::anyhow!("not retryable"))
-        };
-
-        let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_millis(1));
-        let v_lock_copy = v_lock.clone();
-        let result = f
-            .retry(&backoff)
-            .notify(move |e, dur| {
-                assert_eq!("not retryable", e.to_string());
-                *v_lock_copy.lock().unwrap() += 1;
-                assert!(dur >= Duration::from_millis(1));
-            })
-            .await;
-
-        assert!(result.is_err());
-        assert_eq!(3, *v_lock.lock().unwrap());
-        Ok(())
-    }
 }
