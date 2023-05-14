@@ -87,8 +87,8 @@ where
 #[pin_project]
 pub struct Retry<B: Backoff, T, E, Fut: Future<Output = Result<T, E>>, FutureFn: FnMut() -> Fut> {
     backoff: B,
-    retryable: fn(&E) -> bool,
-    notify: Box<dyn Fn(&E, Duration)>,
+    retryable: Box<dyn FnMut(&E) -> bool>,
+    notify: Box<dyn FnMut(&E, Duration)>,
     future_fn: FutureFn,
 
     #[pin]
@@ -105,7 +105,7 @@ where
     fn new(future_fn: FutureFn, backoff: B) -> Self {
         Retry {
             backoff,
-            retryable: |_: &E| true,
+            retryable: Box::new(|_: &E| true),
             notify: Box::new(|_: &E, _: Duration| {}),
             future_fn,
             state: State::Idle,
@@ -141,8 +141,8 @@ where
     ///     Ok(())
     /// }
     /// ```
-    pub fn when(mut self, retryable: fn(&E) -> bool) -> Self {
-        self.retryable = retryable;
+    pub fn when(mut self, retryable: impl FnMut(&E) -> bool + 'static) -> Self {
+        self.retryable = Box::new(retryable);
         self
     }
 
@@ -179,7 +179,7 @@ where
     ///     Ok(())
     /// }
     /// ```
-    pub fn notify<'s>(mut self, notify: impl Fn(&E, Duration) + 'static) -> Self {
+    pub fn notify<'s>(mut self, notify: impl FnMut(&E, Duration) + 'static) -> Self {
         self.notify = Box::new(notify);
         self
     }
