@@ -308,7 +308,10 @@ where
     ///     Ok(())
     /// }
     /// ```
-    pub fn notify<NF: FnMut(&E)>(self, notify: NF) -> BlockingRetry<B, T, E, F, C, RF, NF> {
+    pub fn notify<NF: FnMut(&E, Duration)>(
+        self,
+        notify: NF,
+    ) -> BlockingRetry<B, T, E, F, C, RF, NF> {
         BlockingRetry {
             backoff: self.backoff,
             retryable: self.retryable,
