@@ -355,4 +355,32 @@ mod tests {
         assert_eq!(*error_times.lock().await, 4);
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_fn_mut_when_and_notify() -> anyhow::Result<()> {
+        let mut calls_retryable: Vec<()> = vec![];
+        let mut calls_notify: Vec<()> = vec![];
+
+        let f = || async { Err::<(), anyhow::Error>(anyhow::anyhow!("retryable")) };
+
+        let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_millis(1));
+        let result = f
+            .retry(&backoff)
+            .when(|_| {
+                calls_retryable.push(());
+                true
+            })
+            .notify(|_, _| {
+                calls_notify.push(());
+            })
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!("retryable", result.unwrap_err().to_string());
+        // `f` always returns error "retryable", so it should be executed
+        // 4 times (retry 3 times).
+        assert_eq!(calls_retryable.len(), 4);
+        assert_eq!(calls_notify.len(), 3);
+        Ok(())
+    }
 }
