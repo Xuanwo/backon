@@ -16,4 +16,4 @@ tokio = { version = "1", features = ["time"] }
 [dev-dependencies]
 anyhow = "1"
 reqwest = "0.11"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["time", "rt", "macros", "sync"] }
