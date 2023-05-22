@@ -25,7 +25,7 @@ use crate::backoff::BackoffBuilder;
 ///         .await?)
 /// }
 ///
-/// #[tokio::main]
+/// #[tokio::main(flavor = "current_thread")]
 /// async fn main() -> Result<()> {
 ///     let content = fetch.retry(&FibonacciBuilder::default()).await?;
 ///     println!("fetch succeeded: {}", content);

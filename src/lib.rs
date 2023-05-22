@@ -30,7 +30,7 @@
 //!         .await?)
 //! }
 //!
-//! #[tokio::main]
+//! #[tokio::main(flavor = "current_thread")]
 //! async fn main() -> Result<()> {
 //!     let content = fetch.retry(&ExponentialBuilder::default()).await?;
 //!
@@ -53,7 +53,7 @@
 //!         .await?)
 //! }
 //!
-//! #[tokio::main]
+//! #[tokio::main(flavor = "current_thread")]
 //! async fn main() -> Result<()> {
 //!     let content = fetch
 //!         .retry(&ExponentialBuilder::default())
