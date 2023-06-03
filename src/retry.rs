@@ -60,13 +60,11 @@ use crate::Backoff;
 ///     Ok(())
 /// }
 /// ```
-pub trait Retryable<
+pub trait Retryable<B, T, E, Fut, FutureFn>
+where
     B: BackoffBuilder,
-    T,
-    E,
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
->
 {
     /// Generate a new retry
     fn retry(self, builder: &B) -> Retry<B::Backoff, T, E, Fut, FutureFn>;
@@ -91,8 +89,8 @@ pub struct Retry<
     E,
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
-    RF = fn(&E) -> bool,
-    NF = fn(&E, Duration),
+    RF = fn(&Result<T, E>) -> bool,
+    NF = fn(&Result<T, E>, Duration),
 > {
     backoff: B,
     retryable: RF,
@@ -113,8 +111,8 @@ where
     fn new(future_fn: FutureFn, backoff: B) -> Self {
         Retry {
             backoff,
-            retryable: |_: &E| true,
-            notify: |_: &E, _: Duration| {},
+            retryable: |_: &Result<T, E>| true,
+            notify: |_: &Result<T, E>, _: Duration| {},
             future_fn,
             state: State::Idle,
         }
@@ -126,8 +124,8 @@ where
     B: Backoff,
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
-    RF: FnMut(&E) -> bool,
-    NF: FnMut(&E, Duration),
+    RF: FnMut(&Result<T, E>) -> bool,
+    NF: FnMut(&Result<T, E>, Duration),
 {
     /// Set the conditions for retrying.
     ///
@@ -151,14 +149,14 @@ where
     /// async fn main() -> Result<()> {
     ///     let content = fetch
     ///         .retry(&ExponentialBuilder::default())
-    ///         .when(|e| e.to_string() == "EOF")
+    ///         .when(|result| matches!(result,Err(r) if r == "EOF"))
     ///         .await?;
     ///     println!("fetch succeeded: {}", content);
     ///
     ///     Ok(())
     /// }
     /// ```
-    pub fn when<RN: FnMut(&E) -> bool>(
+    pub fn when<RN: FnMut(&Result<T, E>) -> bool>(
         self,
         retryable: RN,
     ) -> Retry<B, T, E, Fut, FutureFn, RN, NF> {
@@ -195,8 +193,8 @@ where
     /// async fn main() -> Result<()> {
     ///     let content = fetch
     ///         .retry(&ExponentialBuilder::default())
-    ///         .notify(|err: &anyhow::Error, dur: Duration| {
-    ///             println!("retrying error {:?} with sleeping {:?}", err, dur);
+    ///         .notify(|result: &Result<String,anyhow::Error>, dur: Duration| {
+    ///             println!("retrying result {result:?} with sleeping {dur:?}");
     ///         })
     ///         .await?;
     ///     println!("fetch succeeded: {}", content);
@@ -204,7 +202,7 @@ where
     ///     Ok(())
     /// }
     /// ```
-    pub fn notify<NN: FnMut(&E, Duration)>(
+    pub fn notify<NN: FnMut(&Result<T, E>, Duration)>(
         self,
         notify: NN,
     ) -> Retry<B, T, E, Fut, FutureFn, RF, NN> {
@@ -239,8 +237,8 @@ where
     B: Backoff,
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
-    RF: FnMut(&E) -> bool,
-    NF: FnMut(&E, Duration),
+    RF: FnMut(&Result<T, E>) -> bool,
+    NF: FnMut(&Result<T, E>, Duration),
 {
     type Output = Result<T, E>;
 
@@ -254,24 +252,21 @@ where
                     this.state.set(State::Polling(fut));
                     continue;
                 }
-                StateProject::Polling(fut) => match ready!(fut.poll(cx)) {
-                    Ok(v) => return Poll::Ready(Ok(v)),
-                    Err(err) => {
-                        // If input error is not retryable, return error directly.
-                        if !(this.retryable)(&err) {
-                            return Poll::Ready(Err(err));
-                        }
-                        match this.backoff.next() {
-                            None => return Poll::Ready(Err(err)),
-                            Some(dur) => {
-                                (this.notify)(&err, dur);
-                                this.state
-                                    .set(State::Sleeping(Box::pin(tokio::time::sleep(dur))));
-                                continue;
-                            }
+                StateProject::Polling(fut) => {
+                    let result = ready!(fut.poll(cx));
+                    if !(this.retryable)(&result) {
+                        return Poll::Ready(result);
+                    }
+                    match this.backoff.next() {
+                        None => return Poll::Ready(result),
+                        Some(dur) => {
+                            (this.notify)(&result, dur);
+                            this.state
+                                .set(State::Sleeping(Box::pin(tokio::time::sleep(dur))));
+                            continue;
                         }
                     }
-                },
+                }
                 StateProject::Sleeping(sl) => {
                     ready!(sl.poll(cx));
                     this.state.set(State::Idle);
@@ -307,6 +302,35 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_retry_with_not_retryable_ok() -> anyhow::Result<()> {
+        let error_times = Mutex::new(0);
+
+        let f = || async {
+            let mut x = error_times.lock().await;
+            *x += 1;
+            Ok::<Option<String>, anyhow::Error>(Some("not retryable".to_string()))
+        };
+
+        let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_millis(1));
+        let result = f
+            .retry(&backoff)
+            // Only retry If the result was an Err or Ok(None)
+            .when(|r| match r {
+                Ok(None) => true,
+                Err(_) => true,
+                _ => false,
+            })
+            .await;
+
+        assert!(result.is_ok());
+        assert_eq!("not retryable", result.unwrap().unwrap());
+        // `f` always returns value "not retryable", so it should be executed
+        // only once.
+        assert_eq!(*error_times.lock().await, 1);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_retry_with_not_retryable_error() -> anyhow::Result<()> {
         let error_times = Mutex::new(0);
 
@@ -320,7 +344,7 @@ mod tests {
         let result = f
             .retry(&backoff)
             // Only retry If error message is `retryable`
-            .when(|e| e.to_string() == "retryable")
+            .when(|r| matches!(r, Err(e) if e.to_string() == "retryable"))
             .await;
 
         assert!(result.is_err());
@@ -328,6 +352,35 @@ mod tests {
         // `f` always returns error "not retryable", so it should be executed
         // only once.
         assert_eq!(*error_times.lock().await, 1);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_retry_with_retryable_ok() -> anyhow::Result<()> {
+        let error_times = Mutex::new(0);
+
+        let f = || async {
+            let mut x = error_times.lock().await;
+            *x += 1;
+            Ok::<String, anyhow::Error>("retryable".to_string())
+        };
+
+        let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_millis(1));
+        let result = f
+            .retry(&backoff)
+            // Only retry If the result was an Err or Ok("retryable")
+            .when(|r| match r {
+                Ok(v) if v == "retryable" => true,
+                Err(_) => true,
+                _ => false,
+            })
+            .await;
+
+        assert!(result.is_ok());
+        assert_eq!("retryable", result.unwrap());
+        // `f` always returns error "retryable", so it should be executed
+        // 4 times (retry 3 times).
+        assert_eq!(*error_times.lock().await, 4);
         Ok(())
     }
 
@@ -345,7 +398,7 @@ mod tests {
         let result = f
             .retry(&backoff)
             // Only retry If error message is `retryable`
-            .when(|e| e.to_string() == "retryable")
+            .when(|r| matches!(r, Err(e) if e.to_string() == "retryable"))
             .await;
 
         assert!(result.is_err());

@@ -57,7 +57,7 @@
 //! async fn main() -> Result<()> {
 //!     let content = fetch
 //!         .retry(&ExponentialBuilder::default())
-//!         .when(|e| e.to_string() == "retryable")
+//!         .when(|r| matches!(r,Err(e) if e.to_string() == "retryable"))
 //!         .await?;
 //!
 //!     println!("fetch succeeded: {}", content);
