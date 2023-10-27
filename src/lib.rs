@@ -14,6 +14,10 @@
 //! - [`ExponentialBackoff`]: backoff with exponential delay, also provides jitter supports.
 //! - [`FibonacciBackoff`]: backoff with fibonacci delay, also provides jitter supports.
 //!
+//! Internally, `tokio::time::sleep()` will be used to sleep between retries, therefore
+//! it will respect [pausing/auto-advancing](https://docs.rs/tokio/latest/tokio/time/fn.pause.html)
+//! tokio's Runtime semantics, if enabled.
+//!
 //! # Examples
 //!
 //! Retry with default settings.
