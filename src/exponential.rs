@@ -71,7 +71,7 @@ impl ExponentialBuilder {
     ///
     /// This function will panic if input factor smaller than `1.0`.
     pub fn with_factor(mut self, factor: f32) -> Self {
-        debug_assert!(factor > 1.0, "invalid factor that lower than 1");
+        debug_assert!(factor >= 1.0, "invalid factor that lower than 1");
 
         self.factor = factor;
         self
