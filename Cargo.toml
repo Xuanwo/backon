@@ -5,6 +5,7 @@ documentation = "https://docs.rs/backon"
 edition = "2021"
 license = "Apache-2.0"
 name = "backon"
+repository = "https://github.com/Xuanwo/backon"
 version = "0.4.3"
 
 [dependencies]
