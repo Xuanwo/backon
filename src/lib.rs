@@ -95,3 +95,6 @@ pub use retry::Retryable;
 mod blocking_retry;
 pub use blocking_retry::BlockingRetry;
 pub use blocking_retry::BlockingRetryable;
+
+mod retry_with_context;
+pub use retry_with_context::RetryableWithContext;
