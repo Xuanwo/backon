@@ -178,9 +178,12 @@ mod retry;
 pub use retry::Retry;
 pub use retry::Retryable;
 
+mod retry_with_context;
+pub use retry_with_context::RetryableWithContext;
+
 mod blocking_retry;
 pub use blocking_retry::BlockingRetry;
 pub use blocking_retry::BlockingRetryable;
 
-mod retry_with_context;
-pub use retry_with_context::RetryableWithContext;
+mod blocking_retry_with_context;
+pub use blocking_retry_with_context::BlockingRetryableWithContext;
