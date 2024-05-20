@@ -2,6 +2,8 @@ use anyhow::Result;
 use backon::ExponentialBuilder;
 use backon::Retryable;
 
+// For more examples, please see: https://docs.rs/backon/#examples
+
 async fn fetch() -> Result<String> {
     let response = reqwest::get("https://httpbingo.org/unstable?failure_rate=0.7").await?;
     if !response.status().is_success() {

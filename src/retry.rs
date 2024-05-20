@@ -38,28 +38,10 @@ use crate::Backoff;
 /// }
 /// ```
 ///
-/// # Example
+/// # Examples
 ///
-/// ```no_run
-/// use anyhow::Result;
-/// use backon::ExponentialBuilder;
-/// use backon::Retryable;
+/// For more examples, please see: [https://docs.rs/backon/#examples](https://docs.rs/backon/#examples)
 ///
-/// async fn fetch() -> Result<String> {
-///     Ok(reqwest::get("https://www.rust-lang.org")
-///         .await?
-///         .text()
-///         .await?)
-/// }
-///
-/// #[tokio::main(flavor = "current_thread")]
-/// async fn main() -> Result<()> {
-///     let content = fetch.retry(&ExponentialBuilder::default()).await?;
-///     println!("fetch succeeded: {}", content);
-///
-///     Ok(())
-/// }
-/// ```
 pub trait Retryable<
     B: BackoffBuilder,
     T,
