@@ -2,6 +2,8 @@ use anyhow::Result;
 use backon::BlockingRetryable;
 use backon::ExponentialBuilder;
 
+// For more examples, please see: https://docs.rs/backon/#examples
+
 fn fetch() -> Result<String> {
     Ok("hello, world!".to_string())
 }

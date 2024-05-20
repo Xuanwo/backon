@@ -2,6 +2,8 @@ use anyhow::Result;
 use backon::BlockingRetryable;
 use backon::ExponentialBuilder;
 
+// For more examples, please see: https://docs.rs/backon/#examples
+
 fn main() -> Result<()> {
     let var = 42;
     // `f` can use input variables
