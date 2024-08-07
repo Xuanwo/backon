@@ -10,8 +10,6 @@ version = "0.4.4"
 
 [dependencies]
 fastrand = "2.0.0"
-futures-core = "0.3.26"
-pin-project = "1"
 tokio = { version = "1", features = ["time"] }
 
 [dev-dependencies]
