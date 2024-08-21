@@ -5,6 +5,12 @@ use std::task::Context;
 use std::task::Poll;
 use std::time::Duration;
 
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::time::{sleep, Sleep};
+
+#[cfg(target_arch = "wasm32")]
+use gloo_timers::future::{sleep, TimeoutFuture as Sleep};
+
 use crate::backoff::BackoffBuilder;
 use crate::Backoff;
 
@@ -208,7 +214,7 @@ enum State<T, E, Fut: Future<Output = Result<T, E>>> {
     Idle,
     Polling(Fut),
     // TODO: we need to support other sleeper
-    Sleeping(gloo_timers::future::TimeoutFuture),
+    Sleeping(Sleep),
 }
 
 impl<B, T, E, Fut, FutureFn, RF, NF> Future for Retry<B, T, E, Fut, FutureFn, RF, NF>
@@ -253,7 +259,7 @@ where
                                 None => return Poll::Ready(Err(err)),
                                 Some(dur) => {
                                     (this.notify)(&err, dur);
-                                    this.state = State::Sleeping(gloo_timers::future::sleep(dur));
+                                    this.state = State::Sleeping(sleep(dur));
                                     continue;
                                 }
                             }
