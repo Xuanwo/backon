@@ -208,7 +208,7 @@ enum State<T, E, Fut: Future<Output = Result<T, E>>> {
     Idle,
     Polling(Fut),
     // TODO: we need to support other sleeper
-    Sleeping(tokio::time::Sleep),
+    Sleeping(gloo_timers::future::TimeoutFuture),
 }
 
 impl<B, T, E, Fut, FutureFn, RF, NF> Future for Retry<B, T, E, Fut, FutureFn, RF, NF>
@@ -253,7 +253,7 @@ where
                                 None => return Poll::Ready(Err(err)),
                                 Some(dur) => {
                                     (this.notify)(&err, dur);
-                                    this.state = State::Sleeping(tokio::time::sleep(dur));
+                                    this.state = State::Sleeping(gloo_timers::future::sleep(dur));
                                     continue;
                                 }
                             }

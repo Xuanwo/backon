@@ -10,10 +10,17 @@ version = "0.4.4"
 
 [dependencies]
 fastrand = "2.0.0"
+gloo-timers = { version = "0.3.0", features = ["futures"] }
 tokio = { version = "1", features = ["time"] }
 
 [dev-dependencies]
 anyhow = "1"
 reqwest = "0.12"
-tokio = { version = "1", features = ["time", "rt", "macros", "sync", "rt-multi-thread"] }
 sqlx = { version = "0.8.0", features = ["runtime-tokio", "sqlite"] }
+tokio = { version = "1", features = [
+  "time",
+  "rt",
+  "macros",
+  "sync",
+  "rt-multi-thread",
+] }

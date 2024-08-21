@@ -255,7 +255,7 @@ enum State<T, E, Ctx, Fut: Future<Output = (Ctx, Result<T, E>)>> {
     Idle(Option<Ctx>),
     Polling(Fut),
     // TODO: we need to support other sleeper
-    Sleeping((Option<Ctx>, tokio::time::Sleep)),
+    Sleeping((Option<Ctx>, gloo_timers::future::TimeoutFuture)),
 }
 
 impl<B, T, E, Ctx, Fut, FutureFn, RF, NF> Future for Retry<B, T, E, Ctx, Fut, FutureFn, RF, NF>
@@ -303,7 +303,7 @@ where
                                 Some(dur) => {
                                     (this.notify)(&err, dur);
                                     this.state =
-                                        State::Sleeping((Some(ctx), tokio::time::sleep(dur)));
+                                        State::Sleeping((Some(ctx), gloo_timers::future::sleep(dur)));
                                     continue;
                                 }
                             }
