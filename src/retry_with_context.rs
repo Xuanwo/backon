@@ -5,6 +5,12 @@ use std::task::Context;
 use std::task::Poll;
 use std::time::Duration;
 
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::time::{sleep, Sleep};
+
+#[cfg(target_arch = "wasm32")]
+use gloo_timers::future::{sleep, TimeoutFuture as Sleep};
+
 use crate::backoff::BackoffBuilder;
 use crate::Backoff;
 
@@ -255,7 +261,7 @@ enum State<T, E, Ctx, Fut: Future<Output = (Ctx, Result<T, E>)>> {
     Idle(Option<Ctx>),
     Polling(Fut),
     // TODO: we need to support other sleeper
-    Sleeping((Option<Ctx>, tokio::time::Sleep)),
+    Sleeping((Option<Ctx>, Sleep)),
 }
 
 impl<B, T, E, Ctx, Fut, FutureFn, RF, NF> Future for Retry<B, T, E, Ctx, Fut, FutureFn, RF, NF>
@@ -302,8 +308,7 @@ where
                                 None => return Poll::Ready((ctx, Err(err))),
                                 Some(dur) => {
                                     (this.notify)(&err, dur);
-                                    this.state =
-                                        State::Sleeping((Some(ctx), tokio::time::sleep(dur)));
+                                    this.state = State::Sleeping((Some(ctx), sleep(dur)));
                                     continue;
                                 }
                             }
@@ -331,12 +336,17 @@ where
 mod tests {
     use std::time::Duration;
 
-    use anyhow::anyhow;
+    use anyhow::{anyhow, Result};
     use tokio::sync::Mutex;
+
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
+
+    #[cfg(not(target_arch = "wasm32"))]
+    use tokio::test;
 
     use super::*;
     use crate::exponential::ExponentialBuilder;
-    use anyhow::Result;
 
     struct Test;
 
@@ -346,7 +356,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[test]
     async fn test_retry_with_not_retryable_error() -> Result<()> {
         let error_times = Mutex::new(0);
 

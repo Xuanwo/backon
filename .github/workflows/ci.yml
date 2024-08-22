@@ -50,3 +50,14 @@ jobs:
         env:
           RUST_LOG: DEBUG
           RUST_BACKTRACE: full
+          
+  wasm-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - run: wasm-pack test --node
+        env:
+          RUST_LOG: DEBUG
+          RUST_BACKTRACE: full

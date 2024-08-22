@@ -5,6 +5,12 @@ use std::task::Context;
 use std::task::Poll;
 use std::time::Duration;
 
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::time::{sleep, Sleep};
+
+#[cfg(target_arch = "wasm32")]
+use gloo_timers::future::{sleep, TimeoutFuture as Sleep};
+
 use crate::backoff::BackoffBuilder;
 use crate::Backoff;
 
@@ -208,7 +214,7 @@ enum State<T, E, Fut: Future<Output = Result<T, E>>> {
     Idle,
     Polling(Fut),
     // TODO: we need to support other sleeper
-    Sleeping(tokio::time::Sleep),
+    Sleeping(Sleep),
 }
 
 impl<B, T, E, Fut, FutureFn, RF, NF> Future for Retry<B, T, E, Fut, FutureFn, RF, NF>
@@ -253,7 +259,7 @@ where
                                 None => return Poll::Ready(Err(err)),
                                 Some(dur) => {
                                     (this.notify)(&err, dur);
-                                    this.state = State::Sleeping(tokio::time::sleep(dur));
+                                    this.state = State::Sleeping(sleep(dur));
                                     continue;
                                 }
                             }
@@ -282,6 +288,12 @@ mod tests {
 
     use tokio::sync::Mutex;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
+
+    #[cfg(not(target_arch = "wasm32"))]
+    use tokio::test;
+
     use super::*;
     use crate::exponential::ExponentialBuilder;
 
@@ -289,7 +301,7 @@ mod tests {
         Err(anyhow::anyhow!("test_query meets error"))
     }
 
-    #[tokio::test]
+    #[test]
     async fn test_retry() -> anyhow::Result<()> {
         let result = always_error
             .retry(&ExponentialBuilder::default().with_min_delay(Duration::from_millis(1)))
@@ -300,7 +312,7 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[test]
     async fn test_retry_with_not_retryable_error() -> anyhow::Result<()> {
         let error_times = Mutex::new(0);
 
@@ -325,7 +337,7 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[test]
     async fn test_retry_with_retryable_error() -> anyhow::Result<()> {
         let error_times = Mutex::new(0);
 
@@ -350,7 +362,7 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[test]
     async fn test_fn_mut_when_and_notify() -> anyhow::Result<()> {
         let mut calls_retryable: Vec<()> = vec![];
         let mut calls_notify: Vec<()> = vec![];

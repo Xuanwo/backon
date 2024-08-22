@@ -180,6 +180,9 @@ pub(crate) fn saturating_mul(d: Duration, rhs: f32) -> Duration {
 mod tests {
     use std::time::Duration;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
+
     use crate::backoff::BackoffBuilder;
     use crate::exponential::ExponentialBuilder;
 
