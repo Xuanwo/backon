@@ -18,7 +18,7 @@ pub type DefaultSleeper = ();
 /// The default implementation of `Sleeper` based on enabled feature flag.
 ///
 /// Under `tokio-sleep` feature, it uses `tokio::time::sleep`.
-#[cfg(feature = "tokio-sleep")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 pub type DefaultSleeper = TokioSleeper;
 /// The default implementation of `Sleeper` based on enabled feature flag.
 ///
