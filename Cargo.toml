@@ -6,7 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 name = "backon"
 repository = "https://github.com/Xuanwo/backon"
-version = "0.4.4"
+version = "0.5.0"
 
 [features]
 gloo-timers-sleep = ["dep:gloo-timers", "gloo-timers/futures"]
