@@ -186,7 +186,7 @@ pub use sleep::DefaultSleeper;
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 pub use sleep::GlooTimersSleep;
 pub use sleep::Sleeper;
-#[cfg(feature = "tokio-sleep")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 pub use sleep::TokioSleeper;
 
 #[cfg(not(target_arch = "wasm32"))]
