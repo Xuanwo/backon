@@ -57,11 +57,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      - run: wasm-pack test --headless --chrome
-        env:
-          RUST_LOG: DEBUG
-          RUST_BACKTRACE: full
-      - run: wasm-pack test --headless --firefox
+      - run: wasm-pack test --node
         env:
           RUST_LOG: DEBUG
           RUST_BACKTRACE: full
