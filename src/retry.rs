@@ -125,6 +125,7 @@ where
     /// use anyhow::Result;
     /// use backon::ExponentialBuilder;
     /// use backon::Retryable;
+    /// use std::future::ready;
     ///
     /// async fn fetch() -> Result<String> {
     ///     Ok(reqwest::get("https://www.rust-lang.org")
