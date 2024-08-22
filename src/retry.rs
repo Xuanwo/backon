@@ -5,14 +5,10 @@ use std::task::Context;
 use std::task::Poll;
 use std::time::Duration;
 
-#[cfg(not(target_arch = "wasm32"))]
-use tokio::time::{sleep, Sleep};
-
-#[cfg(target_arch = "wasm32")]
-use gloo_timers::future::{sleep, TimeoutFuture as Sleep};
-
 use crate::backoff::BackoffBuilder;
 use crate::Backoff;
+use crate::DefaultSleeper;
+use crate::Sleeper;
 
 /// Retryable will add retry support for functions that produces a futures with results.
 ///
@@ -76,6 +72,7 @@ pub struct Retry<
     E,
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
+    SF: Sleeper = DefaultSleeper,
     RF = fn(&E) -> bool,
     NF = fn(&E, Duration),
 > {
@@ -83,8 +80,9 @@ pub struct Retry<
     retryable: RF,
     notify: NF,
     future_fn: FutureFn,
+    sleep_fn: SF,
 
-    state: State<T, E, Fut>,
+    state: State<T, E, Fut, SF::Sleep>,
 }
 
 impl<B, T, E, Fut, FutureFn> Retry<B, T, E, Fut, FutureFn>
@@ -94,25 +92,70 @@ where
     FutureFn: FnMut() -> Fut,
 {
     /// Create a new retry.
+    ///
+    /// This API is only available when `tokio-sleep` feature is enabled.
     fn new(future_fn: FutureFn, backoff: B) -> Self {
         Retry {
             backoff,
             retryable: |_: &E| true,
             notify: |_: &E, _: Duration| {},
             future_fn,
+            sleep_fn: DefaultSleeper::default(),
             state: State::Idle,
         }
     }
 }
 
-impl<B, T, E, Fut, FutureFn, RF, NF> Retry<B, T, E, Fut, FutureFn, RF, NF>
+impl<B, T, E, Fut, FutureFn, SF, RF, NF> Retry<B, T, E, Fut, FutureFn, SF, RF, NF>
 where
     B: Backoff,
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
+    SF: Sleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
 {
+    /// Set the sleeper for retrying.
+    ///
+    /// If not specified, we use the default sleeper that enabled by feature flag.
+    ///
+    /// The sleeper should implement the [`Sleeper`] trait. The simplest way is to use a closure that returns a `Future<Output=()>`.
+    ///
+    /// ```no_run
+    /// use anyhow::Result;
+    /// use backon::ExponentialBuilder;
+    /// use backon::Retryable;
+    /// use std::future::ready;
+    ///
+    /// async fn fetch() -> Result<String> {
+    ///     Ok(reqwest::get("https://www.rust-lang.org")
+    ///         .await?
+    ///         .text()
+    ///         .await?)
+    /// }
+    ///
+    /// #[tokio::main(flavor = "current_thread")]
+    /// async fn main() -> Result<()> {
+    ///     let content = fetch
+    ///         .retry(&ExponentialBuilder::default())
+    ///         .sleep(|_| ready(()))
+    ///         .await?;
+    ///     println!("fetch succeeded: {}", content);
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn sleep<SN: Sleeper>(self, sleep_fn: SN) -> Retry<B, T, E, Fut, FutureFn, SN, RF, NF> {
+        Retry {
+            backoff: self.backoff,
+            retryable: self.retryable,
+            notify: self.notify,
+            future_fn: self.future_fn,
+            sleep_fn,
+            state: State::Idle,
+        }
+    }
+
     /// Set the conditions for retrying.
     ///
     /// If not specified, we treat all errors as retryable.
@@ -145,12 +188,13 @@ where
     pub fn when<RN: FnMut(&E) -> bool>(
         self,
         retryable: RN,
-    ) -> Retry<B, T, E, Fut, FutureFn, RN, NF> {
+    ) -> Retry<B, T, E, Fut, FutureFn, SF, RN, NF> {
         Retry {
             backoff: self.backoff,
             retryable,
             notify: self.notify,
             future_fn: self.future_fn,
+            sleep_fn: self.sleep_fn,
             state: self.state,
         }
     }
@@ -191,11 +235,12 @@ where
     pub fn notify<NN: FnMut(&E, Duration)>(
         self,
         notify: NN,
-    ) -> Retry<B, T, E, Fut, FutureFn, RF, NN> {
+    ) -> Retry<B, T, E, Fut, FutureFn, SF, RF, NN> {
         Retry {
             backoff: self.backoff,
             retryable: self.retryable,
             notify,
+            sleep_fn: self.sleep_fn,
             future_fn: self.future_fn,
             state: self.state,
         }
@@ -209,19 +254,19 @@ where
 /// `tokio::time::Sleep` is a very struct that occupy 640B, so we wrap it
 /// into a `Pin<Box<_>>` to avoid this enum too large.
 #[derive(Default)]
-enum State<T, E, Fut: Future<Output = Result<T, E>>> {
+enum State<T, E, Fut: Future<Output = Result<T, E>>, SleepFut: Future<Output = ()>> {
     #[default]
     Idle,
     Polling(Fut),
-    // TODO: we need to support other sleeper
-    Sleeping(Sleep),
+    Sleeping(SleepFut),
 }
 
-impl<B, T, E, Fut, FutureFn, RF, NF> Future for Retry<B, T, E, Fut, FutureFn, RF, NF>
+impl<B, T, E, Fut, FutureFn, SF, RF, NF> Future for Retry<B, T, E, Fut, FutureFn, SF, RF, NF>
 where
     B: Backoff,
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
+    SF: Sleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
 {
@@ -259,7 +304,7 @@ where
                                 None => return Poll::Ready(Err(err)),
                                 Some(dur) => {
                                     (this.notify)(&err, dur);
-                                    this.state = State::Sleeping(sleep(dur));
+                                    this.state = State::Sleeping(this.sleep_fn.sleep(dur));
                                     continue;
                                 }
                             }
@@ -283,9 +328,9 @@ where
 }
 
 #[cfg(test)]
+#[cfg(any(feature = "tokio-sleep", feature = "gloo-timers-sleep"))]
 mod tests {
-    use std::time::Duration;
-
+    use std::{future::ready, time::Duration};
     use tokio::sync::Mutex;
 
     #[cfg(target_arch = "wasm32")]
@@ -305,6 +350,18 @@ mod tests {
     async fn test_retry() -> anyhow::Result<()> {
         let result = always_error
             .retry(&ExponentialBuilder::default().with_min_delay(Duration::from_millis(1)))
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!("test_query meets error", result.unwrap_err().to_string());
+        Ok(())
+    }
+
+    #[test]
+    async fn test_retry_with_sleep() -> anyhow::Result<()> {
+        let result = always_error
+            .retry(&ExponentialBuilder::default().with_min_delay(Duration::from_millis(1)))
+            .sleep(|_| ready(()))
             .await;
 
         assert!(result.is_err());

@@ -8,12 +8,18 @@ name = "backon"
 repository = "https://github.com/Xuanwo/backon"
 version = "0.4.4"
 
+[features]
+gloo-timers-sleep = ["dep:gloo-timers", "gloo-timers/futures"]
+tokio-sleep = ["dep:tokio", "tokio/time"]
+
 [dependencies]
 fastrand = "2.0.0"
-tokio = { version = "1", features = ["time"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { version = "1", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-gloo-timers = { version = "0.3", features = ["futures"] }
+gloo-timers = { version = "0.3", optional = true }
 
 [dev-dependencies]
 anyhow = "1"

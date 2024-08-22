@@ -181,6 +181,14 @@ pub use retry::Retryable;
 mod retry_with_context;
 pub use retry_with_context::RetryableWithContext;
 
+mod sleep;
+pub use sleep::DefaultSleeper;
+#[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
+pub use sleep::GlooTimersSleep;
+pub use sleep::Sleeper;
+#[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
+pub use sleep::TokioSleeper;
+
 #[cfg(not(target_arch = "wasm32"))]
 mod blocking_retry;
 #[cfg(not(target_arch = "wasm32"))]
