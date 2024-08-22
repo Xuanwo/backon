@@ -56,6 +56,7 @@ impl Sleeper for TokioSleeper {
     }
 }
 
+/// The default implementation of `Sleeper` using `gloo_timers::future::sleep`.
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GlooTimersSleep;
