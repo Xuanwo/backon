@@ -65,6 +65,6 @@ impl Sleeper for GlooTimersSleep {
     type Sleep = gloo_timers::future::TimeoutFuture;
 
     fn sleep(&self, dur: Duration) -> Self::Sleep {
-        gloo_timers::sleep::sleep(dur)
+        gloo_timers::future::sleep(dur)
     }
 }
