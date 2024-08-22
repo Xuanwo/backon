@@ -43,11 +43,11 @@ impl<F: Fn(Duration) -> Fut, Fut: Future<Output = ()>> Sleeper for F {
 }
 
 /// The default implementation of `Sleeper` using `tokio::time::sleep`.
-#[cfg(feature = "tokio-sleep")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TokioSleeper;
 
-#[cfg(feature = "tokio-sleep")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 impl Sleeper for TokioSleeper {
     type Sleep = tokio::time::Sleep;
 
