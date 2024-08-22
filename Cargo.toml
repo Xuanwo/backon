@@ -18,6 +18,16 @@ gloo-timers = { version = "0.3", features = ["futures"] }
 [dev-dependencies]
 anyhow = "1"
 reqwest = "0.12"
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+tokio = { version = "1", features = [
+  "macros",
+  "rt",
+  "sync",
+], default-features = false }
+wasm-bindgen-test = "0.3"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 sqlx = { version = "0.8.0", features = ["runtime-tokio", "sqlite"] }
 tokio = { version = "1", features = [
   "time",

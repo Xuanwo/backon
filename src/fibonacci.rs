@@ -164,6 +164,9 @@ impl Iterator for FibonacciBackoff {
 mod tests {
     use std::time::Duration;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
+
     use crate::backoff::BackoffBuilder;
     use crate::fibonacci::FibonacciBuilder;
 

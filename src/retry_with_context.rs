@@ -336,12 +336,17 @@ where
 mod tests {
     use std::time::Duration;
 
-    use anyhow::anyhow;
+    use anyhow::{anyhow, Result};
     use tokio::sync::Mutex;
+
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
+
+    #[cfg(not(target_arch = "wasm32"))]
+    use tokio::test;
 
     use super::*;
     use crate::exponential::ExponentialBuilder;
-    use anyhow::Result;
 
     struct Test;
 
@@ -351,7 +356,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[test]
     async fn test_retry_with_not_retryable_error() -> Result<()> {
         let error_times = Mutex::new(0);
 
