@@ -36,7 +36,7 @@ use crate::Backoff;
 /// }
 ///
 /// fn main() -> Result<()> {
-///     let content = fetch.retry(&ExponentialBuilder::default()).call()?;
+///     let content = fetch.retry(ExponentialBuilder::default()).call()?;
 ///     println!("fetch succeeded: {}", content);
 ///
 ///     Ok(())
@@ -44,7 +44,7 @@ use crate::Backoff;
 /// ```
 pub trait BlockingRetryable<B: BackoffBuilder, T, E, F: FnMut() -> Result<T, E>> {
     /// Generate a new retry
-    fn retry(self, builder: &B) -> BlockingRetry<B::Backoff, T, E, F>;
+    fn retry(self, builder: B) -> BlockingRetry<B::Backoff, T, E, F>;
 }
 
 impl<B, T, E, F> BlockingRetryable<B, T, E, F> for F
@@ -52,7 +52,7 @@ where
     B: BackoffBuilder,
     F: FnMut() -> Result<T, E>,
 {
-    fn retry(self, builder: &B) -> BlockingRetry<B::Backoff, T, E, F> {
+    fn retry(self, builder: B) -> BlockingRetry<B::Backoff, T, E, F> {
         BlockingRetry::new(self, builder.build())
     }
 }
@@ -111,7 +111,7 @@ where
     ///
     /// fn main() -> Result<()> {
     ///     let retry = fetch
-    ///         .retry(&ExponentialBuilder::default())
+    ///         .retry(ExponentialBuilder::default())
     ///         .when(|e| e.to_string() == "EOF");
     ///     let content = retry.call()?;
     ///     println!("fetch succeeded: {}", content);
@@ -146,7 +146,7 @@ where
     /// }
     ///
     /// fn main() -> Result<()> {
-    ///     let retry = fetch.retry(&ExponentialBuilder::default()).notify(
+    ///     let retry = fetch.retry(ExponentialBuilder::default()).notify(
     ///         |err: &anyhow::Error, dur: Duration| {
     ///             println!("retrying error {:?} with sleeping {:?}", err, dur);
     ///         },
@@ -208,7 +208,7 @@ mod tests {
     #[test]
     fn test_retry() -> anyhow::Result<()> {
         let result = always_error
-            .retry(&ExponentialBuilder::default().with_min_delay(Duration::from_millis(1)))
+            .retry(ExponentialBuilder::default().with_min_delay(Duration::from_millis(1)))
             .call();
 
         assert!(result.is_err());
@@ -228,7 +228,7 @@ mod tests {
 
         let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_millis(1));
         let result = f
-            .retry(&backoff)
+            .retry(backoff)
             // Only retry If error message is `retryable`
             .when(|e| e.to_string() == "retryable")
             .call();
@@ -254,7 +254,7 @@ mod tests {
 
         let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_millis(1));
         let result = f
-            .retry(&backoff)
+            .retry(backoff)
             // Only retry If error message is `retryable`
             .when(|e| e.to_string() == "retryable")
             .call();
@@ -276,7 +276,7 @@ mod tests {
 
         let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_millis(1));
         let result = f
-            .retry(&backoff)
+            .retry(backoff)
             .when(|_| {
                 calls_retryable.push(());
                 true

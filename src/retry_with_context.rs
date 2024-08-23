@@ -67,7 +67,7 @@ use crate::Sleeper;
 ///             (v, res)
 ///         }
 ///     }
-///     .retry(&ExponentialBuilder::default())
+///     .retry(ExponentialBuilder::default())
 ///     .context(test)
 ///     .await;
 ///
@@ -84,7 +84,7 @@ pub trait RetryableWithContext<
 >
 {
     /// Generate a new retry
-    fn retry(self, builder: &B) -> RetryWithContext<B::Backoff, T, E, Ctx, Fut, FutureFn>;
+    fn retry(self, builder: B) -> RetryWithContext<B::Backoff, T, E, Ctx, Fut, FutureFn>;
 }
 
 impl<B, T, E, Ctx, Fut, FutureFn> RetryableWithContext<B, T, E, Ctx, Fut, FutureFn> for FutureFn
@@ -93,7 +93,7 @@ where
     Fut: Future<Output = (Ctx, Result<T, E>)>,
     FutureFn: FnMut(Ctx) -> Fut,
 {
-    fn retry(self, builder: &B) -> RetryWithContext<B::Backoff, T, E, Ctx, Fut, FutureFn> {
+    fn retry(self, builder: B) -> RetryWithContext<B::Backoff, T, E, Ctx, Fut, FutureFn> {
         RetryWithContext::new(self, builder.build())
     }
 }
@@ -210,7 +210,7 @@ where
     /// #[tokio::main(flavor = "current_thread")]
     /// async fn main() -> Result<()> {
     ///     let content = fetch
-    ///         .retry(&ExponentialBuilder::default())
+    ///         .retry(ExponentialBuilder::default())
     ///         .when(|e| e.to_string() == "EOF")
     ///         .await?;
     ///     println!("fetch succeeded: {}", content);
@@ -255,7 +255,7 @@ where
     /// #[tokio::main(flavor = "current_thread")]
     /// async fn main() -> Result<()> {
     ///     let content = fetch
-    ///         .retry(&ExponentialBuilder::default())
+    ///         .retry(ExponentialBuilder::default())
     ///         .notify(|err: &anyhow::Error, dur: Duration| {
     ///             println!("retrying error {:?} with sleeping {:?}", err, dur);
     ///         })
@@ -400,7 +400,7 @@ mod tests {
                 (v, res)
             }
         }
-        .retry(&backoff)
+        .retry(backoff)
         .context(test)
         // Only retry If error message is `retryable`
         .when(|e| e.to_string() == "retryable")

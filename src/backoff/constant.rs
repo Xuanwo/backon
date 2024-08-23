@@ -25,13 +25,13 @@ use crate::backoff::BackoffBuilder;
 ///
 /// #[tokio::main(flavor = "current_thread")]
 /// async fn main() -> Result<()> {
-///     let content = fetch.retry(&ConstantBuilder::default()).await?;
+///     let content = fetch.retry(ConstantBuilder::default()).await?;
 ///     println!("fetch succeeded: {}", content);
 ///
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct ConstantBuilder {
     delay: Duration,
     max_times: Option<usize>,
@@ -71,7 +71,7 @@ impl ConstantBuilder {
 impl BackoffBuilder for ConstantBuilder {
     type Backoff = ConstantBackoff;
 
-    fn build(&self) -> Self::Backoff {
+    fn build(self) -> Self::Backoff {
         ConstantBackoff {
             delay: self.delay,
             max_times: self.max_times,

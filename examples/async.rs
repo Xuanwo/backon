@@ -16,7 +16,7 @@ async fn fetch() -> Result<String> {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
-    let _ = fetch.retry(&ExponentialBuilder::default()).await?;
+    let _ = fetch.retry(ExponentialBuilder::default()).await?;
     println!("fetch succeeded");
 
     Ok(())

@@ -28,13 +28,13 @@ use crate::backoff::BackoffBuilder;
 ///
 /// #[tokio::main(flavor = "current_thread")]
 /// async fn main() -> Result<()> {
-///     let content = fetch.retry(&ExponentialBuilder::default()).await?;
+///     let content = fetch.retry(ExponentialBuilder::default()).await?;
 ///     println!("fetch succeeded: {}", content);
 ///
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct ExponentialBuilder {
     jitter: bool,
     factor: f32,
@@ -103,7 +103,7 @@ impl ExponentialBuilder {
 impl BackoffBuilder for ExponentialBuilder {
     type Backoff = ExponentialBackoff;
 
-    fn build(&self) -> Self::Backoff {
+    fn build(self) -> Self::Backoff {
         ExponentialBackoff {
             jitter: self.jitter,
             factor: self.factor,
