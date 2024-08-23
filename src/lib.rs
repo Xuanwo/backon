@@ -179,6 +179,7 @@ pub use retry::Retry;
 pub use retry::Retryable;
 
 mod retry_with_context;
+pub use retry_with_context::RetryWithContext;
 pub use retry_with_context::RetryableWithContext;
 
 mod sleep;
@@ -198,5 +199,7 @@ pub use blocking_retry::BlockingRetryable;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod blocking_retry_with_context;
+#[cfg(not(target_arch = "wasm32"))]
+pub use blocking_retry_with_context::BlockingRetryWithContext;
 #[cfg(not(target_arch = "wasm32"))]
 pub use blocking_retry_with_context::BlockingRetryableWithContext;
