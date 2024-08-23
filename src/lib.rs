@@ -157,6 +157,10 @@
 
 #![deny(missing_docs)]
 #![deny(unused_qualifications)]
+#![feature(tuple_trait)]
+#![feature(async_fn_traits)]
+#![feature(unboxed_closures)]
+#![feature(async_closure)]
 
 mod backoff;
 pub use backoff::Backoff;
@@ -200,3 +204,5 @@ pub use blocking_retry::BlockingRetryable;
 mod blocking_retry_with_context;
 #[cfg(not(target_arch = "wasm32"))]
 pub use blocking_retry_with_context::BlockingRetryableWithContext;
+
+mod async_retry;
