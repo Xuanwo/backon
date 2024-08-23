@@ -27,13 +27,13 @@ use crate::backoff::BackoffBuilder;
 ///
 /// #[tokio::main(flavor = "current_thread")]
 /// async fn main() -> Result<()> {
-///     let content = fetch.retry(&FibonacciBuilder::default()).await?;
+///     let content = fetch.retry(FibonacciBuilder::default()).await?;
 ///     println!("fetch succeeded: {}", content);
 ///
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct FibonacciBuilder {
     jitter: bool,
     min_delay: Duration,
@@ -88,7 +88,7 @@ impl FibonacciBuilder {
 impl BackoffBuilder for FibonacciBuilder {
     type Backoff = FibonacciBackoff;
 
-    fn build(&self) -> Self::Backoff {
+    fn build(self) -> Self::Backoff {
         FibonacciBackoff {
             jitter: self.jitter,
             min_delay: self.min_delay,

@@ -14,7 +14,7 @@ pub trait BlockingRetryableWithContext<
 >
 {
     /// Generate a new retry
-    fn retry(self, builder: &B) -> BlockingRetryWithContext<B::Backoff, T, E, Ctx, F>;
+    fn retry(self, builder: B) -> BlockingRetryWithContext<B::Backoff, T, E, Ctx, F>;
 }
 
 impl<B, T, E, Ctx, F> BlockingRetryableWithContext<B, T, E, Ctx, F> for F
@@ -22,7 +22,7 @@ where
     B: BackoffBuilder,
     F: FnMut(Ctx) -> (Ctx, Result<T, E>),
 {
-    fn retry(self, builder: &B) -> BlockingRetryWithContext<B::Backoff, T, E, Ctx, F> {
+    fn retry(self, builder: B) -> BlockingRetryWithContext<B::Backoff, T, E, Ctx, F> {
         BlockingRetryWithContext::new(self, builder.build())
     }
 }
@@ -177,7 +177,7 @@ mod tests {
                 (v, res)
             }
         }
-        .retry(&backoff)
+        .retry(backoff)
         .context(test)
         // Only retry If error message is `retryable`
         .when(|e| e.to_string() == "retryable")

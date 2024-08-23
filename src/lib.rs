@@ -36,7 +36,7 @@
 //!
 //! #[tokio::main(flavor = "current_thread")]
 //! async fn main() -> Result<()> {
-//!     let content = fetch.retry(&ExponentialBuilder::default()).await?;
+//!     let content = fetch.retry(ExponentialBuilder::default()).await?;
 //!
 //!     println!("fetch succeeded: {}", content);
 //!     Ok(())
@@ -60,7 +60,7 @@
 //! #[tokio::main(flavor = "current_thread")]
 //! async fn main() -> Result<()> {
 //!     let content = fetch
-//!         .retry(&ExponentialBuilder::default())
+//!         .retry(ExponentialBuilder::default())
 //!         .when(|e| e.to_string() == "retryable")
 //!         .await?;
 //!
@@ -83,7 +83,7 @@
 //! #[tokio::main(flavor = "current_thread")]
 //! async fn main() -> Result<()> {
 //!     let content = (|| async { fetch("https://www.rust-lang.org").await })
-//!         .retry(&ExponentialBuilder::default())
+//!         .retry(ExponentialBuilder::default())
 //!         .when(|e| e.to_string() == "retryable")
 //!         .await?;
 //!
@@ -111,7 +111,7 @@
 //! async fn main() -> Result<()> {
 //!     let test = Test;
 //!     let content = (|| async { test.fetch("https://www.rust-lang.org").await })
-//!         .retry(&ExponentialBuilder::default())
+//!         .retry(ExponentialBuilder::default())
 //!         .when(|e| e.to_string() == "retryable")
 //!         .await?;
 //!
@@ -144,7 +144,7 @@
 //!         // Return input context back.
 //!         (v, res)
 //!     })
-//!     .retry(&ExponentialBuilder::default())
+//!     .retry(ExponentialBuilder::default())
 //!     // Passing context in.
 //!     .context(test)
 //!     .when(|e| e.to_string() == "retryable")

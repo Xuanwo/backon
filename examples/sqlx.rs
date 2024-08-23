@@ -12,7 +12,7 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     let row: (i64,) = (|| sqlx::query_as("SELECT $1").bind(150_i64).fetch_one(&pool))
-        .retry(&backon::ExponentialBuilder::default())
+        .retry(backon::ExponentialBuilder::default())
         .await?;
 
     assert_eq!(row.0, 150);

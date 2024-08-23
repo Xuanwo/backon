@@ -11,7 +11,7 @@ fn fetch() -> Result<String> {
 fn main() -> Result<()> {
     use backon::BlockingRetryable;
 
-    let content = fetch.retry(&backon::ExponentialBuilder::default()).call()?;
+    let content = fetch.retry(backon::ExponentialBuilder::default()).call()?;
     println!("fetch succeeded: {}", content);
 
     Ok(())
