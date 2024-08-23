@@ -159,20 +159,7 @@
 #![deny(unused_qualifications)]
 
 mod backoff;
-pub use backoff::Backoff;
-pub use backoff::BackoffBuilder;
-
-mod constant;
-pub use constant::ConstantBackoff;
-pub use constant::ConstantBuilder;
-
-mod exponential;
-pub use exponential::ExponentialBackoff;
-pub use exponential::ExponentialBuilder;
-
-mod fibonacci;
-pub use fibonacci::FibonacciBackoff;
-pub use fibonacci::FibonacciBuilder;
+pub use backoff::*;
 
 mod retry;
 pub use retry::Retry;

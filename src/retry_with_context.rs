@@ -373,7 +373,7 @@ mod tests {
     use tokio::test;
 
     use super::*;
-    use crate::exponential::ExponentialBuilder;
+    use crate::ExponentialBuilder;
 
     struct Test;
 

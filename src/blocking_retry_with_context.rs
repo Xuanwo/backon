@@ -149,7 +149,7 @@ mod tests {
     use std::sync::Mutex;
 
     use super::*;
-    use crate::exponential::ExponentialBuilder;
+    use crate::ExponentialBuilder;
     use anyhow::Result;
 
     struct Test;

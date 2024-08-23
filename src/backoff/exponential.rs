@@ -183,8 +183,8 @@ mod tests {
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
-    use crate::backoff::BackoffBuilder;
-    use crate::exponential::ExponentialBuilder;
+    use crate::BackoffBuilder;
+    use crate::ExponentialBuilder;
 
     #[test]
     fn test_exponential_default() {
