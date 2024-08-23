@@ -340,7 +340,7 @@ mod tests {
     use tokio::test;
 
     use super::*;
-    use crate::exponential::ExponentialBuilder;
+    use crate::ExponentialBuilder;
 
     async fn always_error() -> anyhow::Result<()> {
         Err(anyhow::anyhow!("test_query meets error"))
