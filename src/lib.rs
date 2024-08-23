@@ -175,7 +175,6 @@ pub use fibonacci::FibonacciBackoff;
 pub use fibonacci::FibonacciBuilder;
 
 mod retry;
-pub use retry::Retry;
 pub use retry::Retryable;
 
 mod retry_with_context;
@@ -191,8 +190,6 @@ pub use sleep::TokioSleeper;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod blocking_retry;
-#[cfg(not(target_arch = "wasm32"))]
-pub use blocking_retry::BlockingRetry;
 #[cfg(not(target_arch = "wasm32"))]
 pub use blocking_retry::BlockingRetryable;
 
