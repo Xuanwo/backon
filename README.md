@@ -1,6 +1,4 @@
 <div align="center">
-  <img src="./.github/assets/logo.jpeg" alt="BackON" width="45%" />
-
   # backon
 
   [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
@@ -9,13 +7,13 @@
   [actions]: https://github.com/Xuanwo/backon/actions?query=branch%3Amain
   [Latest Version]: https://img.shields.io/crates/v/backon.svg
   [crates.io]: https://crates.io/crates/backon
+
+  A rust library for retrying operations with backoff strategies.
+
+  > If your bacon is burnt, `backon` gives you more chances.
+
+  <img src="./.github/assets/logo.jpeg" alt="BackON" width="45%" />
 </div>
-
-A rust library for retrying operations with backoff strategies.
-
-> If your bacon is burnt, `backon` gives you more chances.
-
----
 
 The opposite backoff implementation of the popular [backoff](https://docs.rs/backoff).
 
