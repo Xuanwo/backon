@@ -5,6 +5,8 @@
 [Latest Version]: https://img.shields.io/crates/v/backon.svg
 [crates.io]: https://crates.io/crates/backon
 
+![](./.github/assets/logo.jpeg)
+
 A rust library for retrying operations with backoff strategies.
 
 > If your bacon is burnt, `backon` gives you more chances.
