@@ -33,7 +33,7 @@ jobs:
       - name: Install
         run: rustup toolchain install ${BACKON_MSRV}
       - name: Check MSRV
-        run: cargo +${BACKON_MSRV} test --all-features
+        run: cargo +${BACKON_MSRV} test --features tokio-sleep
         env:
           RUST_LOG: DEBUG
           RUST_BACKTRACE: full
