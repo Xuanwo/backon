@@ -12,6 +12,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
+env:
+  # Minimum Supported Rust Version for backon
+  BACKON_MSRV: 1.80
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -21,6 +25,18 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Clippy
         run: cargo clippy --all-features --all-targets -- -D warnings
+
+  msrv-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install
+        run: rustup toolchain install ${BACKON_MSRV}
+      - name: Check MSRV
+        run: cargo ${BACKON_MSRV} test --all-features
+        env:
+          RUST_LOG: DEBUG
+          RUST_BACKTRACE: full
 
   unit:
     runs-on: ${{ matrix.os }}
