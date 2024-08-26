@@ -41,7 +41,6 @@ use crate::Sleeper;
 /// # Examples
 ///
 /// For more examples, please see: [https://docs.rs/backon/#examples](https://docs.rs/backon/#examples)
-///
 pub trait Retryable<
     B: BackoffBuilder,
     T,
