@@ -1,6 +1,6 @@
 # backon
 
-<img src="./.github/assets/logo.jpeg" alt="BackON" weith="38.2%" align="right" />
+<img src="./.github/assets/logo.jpeg" alt="BackON" width="38.2%" align="right" />
 
 [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
 
