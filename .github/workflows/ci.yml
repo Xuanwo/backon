@@ -33,10 +33,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Test
-        run: cargo test --all-features
+        run: cargo +nightly test --all-features
         env:
           RUST_LOG: DEBUG
           RUST_BACKTRACE: full
+          RUSTDOCFLAGS: "--cfg docsrs"
 
   wasm-unit:
     runs-on: ubuntu-latest

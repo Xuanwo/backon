@@ -1,8 +1,23 @@
-//! backon intends to provide an opposite backoff implementation of the popular [backoff](https://docs.rs/backoff).
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/Xuanwo/backon/main/.github/assets/logo.jpeg"
+)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+
+//! BackON &emsp; [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
 //!
-//! - Newer: developed by Rust edition 2021 and latest stable.
-//! - Cleaner: Iterator based abstraction, easy to use, customization friendly.
-//! - Easier: Trait based implementations, works like a native function provided by closures.
+//! [Build Status]: https://img.shields.io/github/actions/workflow/status/Xuanwo/backon/ci.yml?branch=main
+//! [actions]: https://github.com/Xuanwo/backon/actions?query=branch%3Amain
+//! [Latest Version]: https://img.shields.io/crates/v/backon.svg
+//! [crates.io]: https://crates.io/crates/backon
+//!
+//! <img src="https://raw.githubusercontent.com/Xuanwo/backon/main/.github/assets/logo.jpeg" alt="BackON" width="38.2%"/>
+//!
+//! Make **retry** like a built-in feature provided by Rust.
+//!
+//! - **Simple**: Just like a built-in feature: `your_fn.retry(ExponentialBuilder::default()).await`.
+//! - **Flexible**: Supports both blocking and async functions.
+//! - **Powerful**: Allows control over retry behavior such as [`when`](https://docs.rs/backon/latest/backon/struct.Retry.html#method.when) and [`notify`](https://docs.rs/backon/latest/backon/struct.Retry.html#method.notify).
+//! - **Customizable**: Supports custom retry strategies like [exponential](https://docs.rs/backon/latest/backon/struct.ExponentialBuilder.html), [constant](https://docs.rs/backon/latest/backon/struct.ConstantBuilder.html), etc.
 //!
 //! # Backoff
 //!
@@ -14,143 +29,65 @@
 //! - [`ExponentialBackoff`]: backoff with exponential delay, also provides jitter supports.
 //! - [`FibonacciBackoff`]: backoff with fibonacci delay, also provides jitter supports.
 //!
-//! Internally, `tokio::time::sleep()` will be used to sleep between retries, therefore
-//! it will respect [pausing/auto-advancing](https://docs.rs/tokio/latest/tokio/time/fn.pause.html)
-//! tokio's Runtime semantics, if enabled.
+//! # Retry
 //!
-//! # Examples
+//! For more examples, please visit [`docs::examples`].
 //!
-//! Retry with default settings.
+//! ## Retry an async function
 //!
-//! ```no_run
+//! ```rust
 //! use anyhow::Result;
 //! use backon::ExponentialBuilder;
 //! use backon::Retryable;
+//! use std::time::Duration;
 //!
 //! async fn fetch() -> Result<String> {
-//!     Ok(reqwest::get("https://www.rust-lang.org")
-//!         .await?
-//!         .text()
-//!         .await?)
+//!     Ok("hello, world!".to_string())
 //! }
 //!
-//! #[tokio::main(flavor = "current_thread")]
-//! async fn main() -> Result<()> {
-//!     let content = fetch.retry(ExponentialBuilder::default()).await?;
-//!
-//!     println!("fetch succeeded: {}", content);
-//!     Ok(())
-//! }
-//! ```
-//!
-//! Retry with specify retryable error.
-//!
-//! ```no_run
-//! use anyhow::Result;
-//! use backon::ExponentialBuilder;
-//! use backon::Retryable;
-//!
-//! async fn fetch() -> Result<String> {
-//!     Ok(reqwest::get("https://www.rust-lang.org")
-//!         .await?
-//!         .text()
-//!         .await?)
-//! }
-//!
-//! #[tokio::main(flavor = "current_thread")]
+//! #[tokio::main]
 //! async fn main() -> Result<()> {
 //!     let content = fetch
+//!         // Retry with exponential backoff
 //!         .retry(ExponentialBuilder::default())
-//!         .when(|e| e.to_string() == "retryable")
+//!         // When to retry
+//!         .when(|e| e.to_string() == "EOF")
+//!         // Notify when retrying
+//!         .notify(|err: &anyhow::Error, dur: Duration| {
+//!             println!("retrying {:?} after {:?}", err, dur);
+//!         })
 //!         .await?;
-//!
 //!     println!("fetch succeeded: {}", content);
+//!
 //!     Ok(())
 //! }
 //! ```
 //!
-//! Retry functions with args.
+//! ## Retry a blocking function
 //!
-//! ```no_run
+//! ```rust
 //! use anyhow::Result;
+//! use backon::BlockingRetryable;
 //! use backon::ExponentialBuilder;
-//! use backon::Retryable;
+//! use std::time::Duration;
 //!
-//! async fn fetch(url: &str) -> Result<String> {
-//!     Ok(reqwest::get(url).await?.text().await?)
+//! fn fetch() -> Result<String> {
+//!     Ok("hello, world!".to_string())
 //! }
 //!
-//! #[tokio::main(flavor = "current_thread")]
-//! async fn main() -> Result<()> {
-//!     let content = (|| async { fetch("https://www.rust-lang.org").await })
+//! fn main() -> Result<()> {
+//!     let content = fetch
+//!         // Retry with exponential backoff
 //!         .retry(ExponentialBuilder::default())
-//!         .when(|e| e.to_string() == "retryable")
-//!         .await?;
-//!
+//!         // When to retry
+//!         .when(|e| e.to_string() == "EOF")
+//!         // Notify when retrying
+//!         .notify(|err: &anyhow::Error, dur: Duration| {
+//!             println!("retrying {:?} after {:?}", err, dur);
+//!         })
+//!         .call()?;
 //!     println!("fetch succeeded: {}", content);
-//!     Ok(())
-//! }
-//! ```
 //!
-//! Retry functions with receiver `&self`.
-//!
-//! ```no_run
-//! use anyhow::Result;
-//! use backon::ExponentialBuilder;
-//! use backon::Retryable;
-//!
-//! struct Test;
-//!
-//! impl Test {
-//!     async fn fetch(&self, url: &str) -> Result<String> {
-//!         Ok(reqwest::get(url).await?.text().await?)
-//!     }
-//! }
-//!
-//! #[tokio::main(flavor = "current_thread")]
-//! async fn main() -> Result<()> {
-//!     let test = Test;
-//!     let content = (|| async { test.fetch("https://www.rust-lang.org").await })
-//!         .retry(ExponentialBuilder::default())
-//!         .when(|e| e.to_string() == "retryable")
-//!         .await?;
-//!
-//!     println!("fetch succeeded: {}", content);
-//!     Ok(())
-//! }
-//! ```
-//!
-//! Retry functions with receiver `&mut self`.
-//!
-//! ```no_run
-//! use anyhow::Result;
-//! use backon::ExponentialBuilder;
-//! use backon::RetryableWithContext;
-//!
-//! struct Test;
-//!
-//! impl Test {
-//!     async fn fetch(&mut self, url: &str) -> Result<String> {
-//!         Ok(reqwest::get(url).await?.text().await?)
-//!     }
-//! }
-//!
-//! #[tokio::main(flavor = "current_thread")]
-//! async fn main() -> Result<()> {
-//!     let test = Test;
-//!
-//!     let (_, result) = (|mut v: Test| async {
-//!         let res = v.fetch("https://www.rust-lang.org").await;
-//!         // Return input context back.
-//!         (v, res)
-//!     })
-//!     .retry(ExponentialBuilder::default())
-//!     // Passing context in.
-//!     .context(test)
-//!     .when(|e| e.to_string() == "retryable")
-//!     .await;
-//!
-//!     println!("fetch succeeded: {}", result.unwrap());
 //!     Ok(())
 //! }
 //! ```
@@ -190,3 +127,6 @@ mod blocking_retry_with_context;
 pub use blocking_retry_with_context::BlockingRetryWithContext;
 #[cfg(not(target_arch = "wasm32"))]
 pub use blocking_retry_with_context::BlockingRetryableWithContext;
+
+#[cfg(docsrs)]
+pub mod docs;

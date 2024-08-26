@@ -43,6 +43,9 @@ impl<F: Fn(Duration) -> Fut, Fut: Future<Output = ()>> Sleeper for F {
 }
 
 /// The default implementation of `Sleeper` using `tokio::time::sleep`.
+///
+/// it will respect [pausing/auto-advancing](https://docs.rs/tokio/latest/tokio/time/fn.pause.html)
+/// tokio's Runtime semantics, if enabled.
 #[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TokioSleeper;

@@ -7,7 +7,7 @@
 
 <img src="./.github/assets/logo.jpeg" alt="BackON" width="38.2%"/>
 
-BackON: Make **retry** like a built-in feature provided by Rust.
+Make **retry** like a built-in feature provided by Rust.
 
 - **Simple**: Just like a built-in feature: `your_fn.retry(ExponentialBuilder::default()).await`.
 - **Flexible**: Supports both blocking and async functions.
