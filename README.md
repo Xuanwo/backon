@@ -16,6 +16,8 @@
   <img src="./.github/assets/logo.jpeg" alt="BackON" width="45%" />
 </div>
 
+---
+
 The opposite backoff implementation of the popular [backoff](https://docs.rs/backoff).
 
 - Newer: developed by Rust edition 2021 and latest stable.
