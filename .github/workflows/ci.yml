@@ -33,6 +33,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Test
+        run: cargo test --all-features
+        env:
+          RUST_LOG: DEBUG
+          RUST_BACKTRACE: full
+
+  nightly-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install nightly
+      - name: Test
         run: cargo +nightly test --all-features
         env:
           RUST_LOG: DEBUG
