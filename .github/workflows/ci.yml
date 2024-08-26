@@ -14,7 +14,7 @@ concurrency:
 
 env:
   # Minimum Supported Rust Version for backon
-  BACKON_MSRV: 1.80
+  BACKON_MSRV: "1.70"
 
 jobs:
   check:
@@ -33,7 +33,7 @@ jobs:
       - name: Install
         run: rustup toolchain install ${BACKON_MSRV}
       - name: Check MSRV
-        run: cargo ${BACKON_MSRV} test --all-features
+        run: cargo +${BACKON_MSRV} test --all-features
         env:
           RUST_LOG: DEBUG
           RUST_BACKTRACE: full
