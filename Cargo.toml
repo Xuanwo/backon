@@ -18,8 +18,8 @@ targets = [
 ]
 
 [features]
-gloo-timers-sleep = ["dep:gloo-timers", "gloo-timers/futures"]
-tokio-sleep = ["dep:tokio", "tokio/time"]
+gloo-timers-sleep = ["dep:gloo-timers", "gloo-timers?/futures"]
+tokio-sleep = ["dep:tokio", "tokio?/time"]
 
 [dependencies]
 fastrand = "2.0.0"
