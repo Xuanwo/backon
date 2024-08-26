@@ -1,5 +1,5 @@
 [package]
-description = "Retry with backoff without effort."
+description = "Make retry like a built-in feature provided by Rust."
 documentation = "https://docs.rs/backon"
 edition = "2021"
 license = "Apache-2.0"
