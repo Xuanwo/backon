@@ -1,20 +1,18 @@
-<div align="center">
-
-  # backon
-
-  [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
-
-  [Build Status]: https://img.shields.io/github/actions/workflow/status/Xuanwo/backon/ci.yml?branch=main
-  [actions]: https://github.com/Xuanwo/backon/actions?query=branch%3Amain
-  [Latest Version]: https://img.shields.io/crates/v/backon.svg
-  [crates.io]: https://crates.io/crates/backon
-
-  A rust library for retrying operations with backoff strategies.
-
-  > If your bacon is burnt, `backon` gives you more chances.
-
-  <img src="./.github/assets/logo.jpeg" alt="BackON" width="45%" />
+<div style="overflow: hidden;">
+  <div style="float: left; width: 55%;">
+    <h1>backon</h1>
+    <div>
+      [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
+    </div>
+    <p>A Rust library for retrying operations with backoff strategies.</p>
+  </div>
+  <img src="./.github/assets/logo.jpeg" alt="BackON" width="40%" style="float: right;" />
 </div>
+
+[Build Status]: https://img.shields.io/github/actions/workflow/status/Xuanwo/backon/ci.yml?branch=main
+[actions]: https://github.com/Xuanwo/backon/actions?query=branch%3Amain
+[Latest Version]: https://img.shields.io/crates/v/backon.svg
+[crates.io]: https://crates.io/crates/backon
 
 ---
 
