@@ -6,7 +6,7 @@ license = "Apache-2.0"
 name = "backon"
 repository = "https://github.com/Xuanwo/backon"
 rust-version = "1.70"
-version = "1.0.0"
+version = "1.0.1"
 
 [package.metadata.docs.rs]
 all-features = true
