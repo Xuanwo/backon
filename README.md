@@ -5,7 +5,9 @@
 [Latest Version]: https://img.shields.io/crates/v/backon.svg
 [crates.io]: https://crates.io/crates/backon
 
-![](./.github/assets/logo.jpeg)
+<p align="center">
+  <img src="./.github/assets/logo.jpeg" alt="BackON" width="61.8%" />
+</p>
 
 A rust library for retrying operations with backoff strategies.
 
