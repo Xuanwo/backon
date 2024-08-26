@@ -4,6 +4,7 @@
     <div>
 
       [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
+
     </div>
     <p>A Rust library for retrying operations with backoff strategies.</p>
   </div>
