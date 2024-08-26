@@ -1,13 +1,11 @@
-# BackON
-
-<img src="./.github/assets/logo.jpeg" alt="BackON" width="38.2%" align="right" />
-
-[![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
+# BackON &emsp; [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
 
 [Build Status]: https://img.shields.io/github/actions/workflow/status/Xuanwo/backon/ci.yml?branch=main
 [actions]: https://github.com/Xuanwo/backon/actions?query=branch%3Amain
 [Latest Version]: https://img.shields.io/crates/v/backon.svg
 [crates.io]: https://crates.io/crates/backon
+
+<img src="./.github/assets/logo.jpeg" alt="BackON" width="38.2%"/>
 
 BackON: Make **retry** like a built-in feature provided by Rust.
 
