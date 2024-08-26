@@ -1,14 +1,9 @@
+# backon &emsp; [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
+
+A Rust library for retrying operations with backoff strategies.
+
 <div style="overflow: hidden;">
-  <div style="float: left; width: 55%;">
-    <h1>backon</h1>
-    <div>
-
-      [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
-
-    </div>
-    <p>A Rust library for retrying operations with backoff strategies.</p>
-  </div>
-  <img src="./.github/assets/logo.jpeg" alt="BackON" width="40%" style="float: right;" />
+  <img src="./.github/assets/logo.jpeg" alt="BackON" width="40%" style="float: right; margin-left: 20px;" />
 </div>
 
 [Build Status]: https://img.shields.io/github/actions/workflow/status/Xuanwo/backon/ci.yml?branch=main
