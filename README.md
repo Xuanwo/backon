@@ -1,6 +1,6 @@
 # backon &emsp; [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
 
-<img src="./.github/assets/logo.jpeg" alt="BackON" width="40%" style="align: right" />
+<img src="./.github/assets/logo.jpeg" alt="BackON" width="40%" align="right" />
 
 A Rust library for retrying operations with backoff strategies.
 
