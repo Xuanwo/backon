@@ -1,10 +1,10 @@
-# backon
+# BackON
 
 <img src="./.github/assets/logo.jpeg" alt="BackON" width="38.2%" align="right" />
 
 [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
 
-A Rust library for retrying operations with backoff strategies.
+BackON: Make **retry** like a built-in feature provided by Rust.
 
 [Build Status]: https://img.shields.io/github/actions/workflow/status/Xuanwo/backon/ci.yml?branch=main
 [actions]: https://github.com/Xuanwo/backon/actions?query=branch%3Amain
@@ -13,32 +13,18 @@ A Rust library for retrying operations with backoff strategies.
 
 ---
 
-The opposite backoff implementation of the popular [backoff](https://docs.rs/backoff).
+## Why BackON?
 
-- Newer: developed by Rust edition 2021 and latest stable.
-- Cleaner: Iterator based abstraction, easy to use, customization friendly.
-- Easier: Trait based implementations, works like a native function provided by closures.
+- **Simple**: Just like a built-in feature: `your_fn.retry(ExponentialBuilder::default()).await`.
+- **Flexible**: Supports both blocking and async functions.
+- **Powerful**: Allows control over retry behavior such as [`when`](https://docs.rs/backon/latest/backon/struct.Retry.html#method.when) and [`notify`](https://docs.rs/backon/latest/backon/struct.Retry.html#method.notify).
+- **Customizable**: Supports custom retry strategies like [exponential](https://docs.rs/backon/latest/backon/struct.ExponentialBuilder.html), [constant](https://docs.rs/backon/latest/backon/struct.ConstantBuilder.html), etc.
 
 ## Quick Start
 
-Retry a blocking function.
-
-```rust
-use anyhow::Result;
-use backon::BlockingRetryable;
-use backon::ExponentialBuilder;
-
-fn fetch() -> Result<String> {
-     Ok("hello, world!".to_string())
-}
-
-fn main() -> Result<()> {
-    let content = fetch.retry(ExponentialBuilder::default()).call()?;
-    println!("fetch succeeded: {}", content);
-
-    Ok(())
-}
-```
+<table>
+  <tr>
+    <td>
 
 Retry an async function.
 
@@ -53,12 +39,55 @@ async fn fetch() -> Result<String> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let content = fetch.retry(ExponentialBuilder::default()).await?;
+    let content = fetch
+        // Retry with exponential backoff
+        .retry(ExponentialBuilder::default())
+        // When to retry
+        .when(|e| e.to_string() == "EOF")
+        // Notify when retrying
+        .notify(|err: &anyhow::Error, dur: Duration| {
+            println!("retrying error {:?} with sleeping {:?}", err, dur);
+        })
+        .await?;
     println!("fetch succeeded: {}", content);
 
     Ok(())
 }
 ```
+
+</td>
+<td>
+
+Retry a blocking function.
+
+```rust
+use anyhow::Result;
+use backon::BlockingRetryable;
+use backon::ExponentialBuilder;
+
+fn fetch() -> Result<String> {
+     Ok("hello, world!".to_string())
+}
+
+fn main() -> Result<()> {
+    let content = fetch
+        // Retry with exponential backoff
+        .retry(ExponentialBuilder::default())
+        // When to retry
+        .when(|e| e.to_string() == "EOF")
+        // Notify when retrying
+        .notify(|err: &anyhow::Error, dur: Duration| {
+            println!("retrying error {:?} with sleeping {:?}", err, dur);
+        })
+        .call()?;
+    println!("fetch succeeded: {}", content);
+
+    Ok(())
+}
+```
+
+</td>
+<table>
 
 ## Contributing
 
@@ -70,8 +99,6 @@ project.
 Submit [issues](https://github.com/Xuanwo/backon/issues/new/choose) for bug report or asking questions
 in [discussion](https://github.com/Xuanwo/backon/discussions/new?category=q-a).
 
-#### License
+## License
 
-<sup>
 Licensed under <a href="./LICENSE">Apache License, Version 2.0</a>.
-</sup>
