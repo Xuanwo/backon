@@ -114,18 +114,12 @@ pub use sleep::Sleeper;
 #[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 pub use sleep::TokioSleeper;
 
-#[cfg(not(target_arch = "wasm32"))]
 mod blocking_retry;
-#[cfg(not(target_arch = "wasm32"))]
 pub use blocking_retry::BlockingRetry;
-#[cfg(not(target_arch = "wasm32"))]
 pub use blocking_retry::BlockingRetryable;
 
-#[cfg(not(target_arch = "wasm32"))]
 mod blocking_retry_with_context;
-#[cfg(not(target_arch = "wasm32"))]
 pub use blocking_retry_with_context::BlockingRetryWithContext;
-#[cfg(not(target_arch = "wasm32"))]
 pub use blocking_retry_with_context::BlockingRetryableWithContext;
 
 #[cfg(docsrs)]
