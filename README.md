@@ -4,21 +4,19 @@
 
 [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
 
-BackON: Make **retry** like a built-in feature provided by Rust.
-
 [Build Status]: https://img.shields.io/github/actions/workflow/status/Xuanwo/backon/ci.yml?branch=main
 [actions]: https://github.com/Xuanwo/backon/actions?query=branch%3Amain
 [Latest Version]: https://img.shields.io/crates/v/backon.svg
 [crates.io]: https://crates.io/crates/backon
 
----
-
-## Why BackON?
+BackON: Make **retry** like a built-in feature provided by Rust.
 
 - **Simple**: Just like a built-in feature: `your_fn.retry(ExponentialBuilder::default()).await`.
 - **Flexible**: Supports both blocking and async functions.
 - **Powerful**: Allows control over retry behavior such as [`when`](https://docs.rs/backon/latest/backon/struct.Retry.html#method.when) and [`notify`](https://docs.rs/backon/latest/backon/struct.Retry.html#method.notify).
 - **Customizable**: Supports custom retry strategies like [exponential](https://docs.rs/backon/latest/backon/struct.ExponentialBuilder.html), [constant](https://docs.rs/backon/latest/backon/struct.ConstantBuilder.html), etc.
+
+---
 
 ## Quick Start
 
@@ -34,7 +32,7 @@ use backon::ExponentialBuilder;
 use backon::Retryable;
 
 async fn fetch() -> Result<String> {
-    Ok(reqwest::get("https://www.rust-lang.org").await?.text().await?)
+    Ok("hello, world!".to_string())
 }
 
 #[tokio::main]
@@ -46,7 +44,7 @@ async fn main() -> Result<()> {
         .when(|e| e.to_string() == "EOF")
         // Notify when retrying
         .notify(|err: &anyhow::Error, dur: Duration| {
-            println!("retrying error {:?} with sleeping {:?}", err, dur);
+            println!("retrying {:?} after {:?}", err, dur);
         })
         .await?;
     println!("fetch succeeded: {}", content);
@@ -66,7 +64,7 @@ use backon::BlockingRetryable;
 use backon::ExponentialBuilder;
 
 fn fetch() -> Result<String> {
-     Ok("hello, world!".to_string())
+    Ok("hello, world!".to_string())
 }
 
 fn main() -> Result<()> {
@@ -77,7 +75,7 @@ fn main() -> Result<()> {
         .when(|e| e.to_string() == "EOF")
         // Notify when retrying
         .notify(|err: &anyhow::Error, dur: Duration| {
-            println!("retrying error {:?} with sleeping {:?}", err, dur);
+            println!("retrying {:?} after {:?}", err, dur);
         })
         .call()?;
     println!("fetch succeeded: {}", content);
