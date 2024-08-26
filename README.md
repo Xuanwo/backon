@@ -18,11 +18,7 @@ BackON: Make **retry** like a built-in feature provided by Rust.
 
 ## Quick Start
 
-<table>
-  <tr>
-    <td>
-
-Retry an async function.
+### Retry an async function.
 
 ```rust
 use anyhow::Result;
@@ -51,10 +47,7 @@ async fn main() -> Result<()> {
 }
 ```
 
-</td>
-<td>
-
-Retry a blocking function.
+### Retry a blocking function.
 
 ```rust
 use anyhow::Result;
@@ -81,9 +74,6 @@ fn main() -> Result<()> {
     Ok(())
 }
 ```
-
-</td>
-<table>
 
 ## Contributing
 
