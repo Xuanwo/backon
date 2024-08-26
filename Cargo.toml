@@ -1,11 +1,11 @@
 [package]
-authors = ["Xuanwo <github@xuanwo.io>"]
 description = "Retry with backoff without effort."
 documentation = "https://docs.rs/backon"
 edition = "2021"
 license = "Apache-2.0"
 name = "backon"
 repository = "https://github.com/Xuanwo/backon"
+rust-version = "1.70"
 version = "0.5.0"
 
 [package.metadata.docs.rs]
@@ -18,8 +18,8 @@ targets = [
 ]
 
 [features]
-gloo-timers-sleep = ["dep:gloo-timers", "gloo-timers/futures"]
-tokio-sleep = ["dep:tokio", "tokio/time"]
+gloo-timers-sleep = ["dep:gloo-timers", "gloo-timers?/futures"]
+tokio-sleep = ["dep:tokio", "tokio?/time"]
 
 [dependencies]
 fastrand = "2.0.0"
