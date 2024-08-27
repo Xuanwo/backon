@@ -320,7 +320,10 @@ where
 #[cfg(test)]
 #[cfg(any(feature = "tokio-sleep", feature = "gloo-timers-sleep"))]
 mod tests {
-    use std::{future::ready, time::Duration};
+    use alloc::string::ToString;
+    use alloc::vec;
+    use alloc::vec::Vec;
+    use core::{future::ready, time::Duration};
     use tokio::sync::Mutex;
 
     #[cfg(target_arch = "wasm32")]

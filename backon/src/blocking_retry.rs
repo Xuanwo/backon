@@ -198,8 +198,11 @@ where
 
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
+    use alloc::vec;
+    use alloc::vec::Vec;
     use core::time::Duration;
-    use std::sync::Mutex;
+    use spin::Mutex;
 
     use super::*;
     use crate::ExponentialBuilder;
@@ -224,7 +227,7 @@ mod tests {
         let error_times = Mutex::new(0);
 
         let f = || {
-            let mut x = error_times.lock().unwrap();
+            let mut x = error_times.lock();
             *x += 1;
             Err::<(), anyhow::Error>(anyhow::anyhow!("not retryable"))
         };
@@ -240,7 +243,7 @@ mod tests {
         assert_eq!("not retryable", result.unwrap_err().to_string());
         // `f` always returns error "not retryable", so it should be executed
         // only once.
-        assert_eq!(*error_times.lock().unwrap(), 1);
+        assert_eq!(*error_times.lock(), 1);
         Ok(())
     }
 
@@ -249,8 +252,8 @@ mod tests {
         let error_times = Mutex::new(0);
 
         let f = || {
-            println!("I have been called!");
-            let mut x = error_times.lock().unwrap();
+            // println!("I have been called!");
+            let mut x = error_times.lock();
             *x += 1;
             Err::<(), anyhow::Error>(anyhow::anyhow!("retryable"))
         };
@@ -266,7 +269,7 @@ mod tests {
         assert_eq!("retryable", result.unwrap_err().to_string());
         // `f` always returns error "retryable", so it should be executed
         // 4 times (retry 3 times).
-        assert_eq!(*error_times.lock().unwrap(), 4);
+        assert_eq!(*error_times.lock(), 4);
         Ok(())
     }
 

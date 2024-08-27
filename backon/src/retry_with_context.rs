@@ -362,9 +362,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use core::time::Duration;
-
+    use alloc::string::ToString;
     use anyhow::{anyhow, Result};
+    use core::time::Duration;
     use tokio::sync::Mutex;
 
     #[cfg(target_arch = "wasm32")]

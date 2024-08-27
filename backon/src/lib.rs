@@ -96,6 +96,7 @@
 #![deny(unused_qualifications)]
 #![no_std]
 #[cfg(feature = "std")]
+extern crate alloc;
 extern crate std;
 
 mod backoff;

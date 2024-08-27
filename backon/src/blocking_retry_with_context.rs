@@ -117,7 +117,7 @@ where
 
     /// Call the retried function.
     ///
-    /// TODO: implement [`std::ops::FnOnce`] after it stable.
+    /// TODO: implement [`FnOnce`] after it stable.
     pub fn call(mut self) -> (Ctx, Result<T, E>) {
         let mut ctx = self.ctx.take().expect("context must be valid");
         loop {
@@ -147,14 +147,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use core::time::Duration;
-
-    use anyhow::anyhow;
-    use std::sync::Mutex;
-
     use super::*;
     use crate::ExponentialBuilder;
+    use alloc::string::ToString;
+    use anyhow::anyhow;
     use anyhow::Result;
+    use core::time::Duration;
+    use std::sync::Mutex;
 
     struct Test;
 
