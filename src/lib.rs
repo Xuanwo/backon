@@ -3,7 +3,7 @@
 )]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
-//! BackON &emsp; [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
+//! [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
 //!
 //! [Build Status]: https://img.shields.io/github/actions/workflow/status/Xuanwo/backon/ci.yml?branch=main
 //! [actions]: https://github.com/Xuanwo/backon/actions?query=branch%3Amain
