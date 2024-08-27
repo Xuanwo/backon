@@ -3,16 +3,19 @@ use std::{
     time::Duration,
 };
 
-/// Sleeper is used to generate a future that resolves after a specified duration.
+/// A sleeper is used to generate a future that completes after a specified duration.
 pub trait Sleeper {
     /// The future returned by the `sleep` method.
     type Sleep: Future<Output = ()>;
 
-    /// Generate a future that resolves after a specified duration.
+    /// Create a future that completes after a set period.
     fn sleep(&self, dur: Duration) -> Self::Sleep;
 }
 
-/// The default implementation of `Sleeper` based on enabled feature flag.
+/// The default implementation of `Sleeper`.
+///
+/// - Under `tokio-sleep` feature, it uses `tokio::time::sleep`.
+/// - Under `gloo-timers-sleep` feature, it uses `gloo_timers::sleep::sleep`.
 #[cfg(all(not(feature = "tokio-sleep"), not(feature = "gloo-timers-sleep")))]
 pub type DefaultSleeper = ();
 /// The default implementation of `Sleeper` based on enabled feature flag.
@@ -42,10 +45,10 @@ impl<F: Fn(Duration) -> Fut, Fut: Future<Output = ()>> Sleeper for F {
     }
 }
 
-/// The default implementation of `Sleeper` using `tokio::time::sleep`.
+/// The default implementation of `Sleeper` uses `tokio::time::sleep`.
 ///
-/// it will respect [pausing/auto-advancing](https://docs.rs/tokio/latest/tokio/time/fn.pause.html)
-/// tokio's Runtime semantics, if enabled.
+/// It will adhere to [pausing/auto-advancing](https://docs.rs/tokio/latest/tokio/time/fn.pause.html)
+/// in Tokio's Runtime semantics, if enabled.
 #[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TokioSleeper;
@@ -59,7 +62,7 @@ impl Sleeper for TokioSleeper {
     }
 }
 
-/// The default implementation of `Sleeper` using `gloo_timers::future::sleep`.
+/// The default implementation of `Sleeper` utilizes `gloo_timers::future::sleep`.
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GlooTimersSleep;

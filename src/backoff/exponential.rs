@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 
-/// ExponentialBuilder is used to build a [`ExponentialBackoff`]
+/// ExponentialBuilder is used to construct an [`ExponentialBackoff`] that offers delays with exponential retries.
 ///
 /// # Default
 ///
@@ -56,20 +56,20 @@ impl Default for ExponentialBuilder {
 }
 
 impl ExponentialBuilder {
-    /// Set jitter of current backoff.
+    /// Set the jitter for the backoff.
     ///
-    /// If jitter is enabled, ExponentialBackoff will add a random jitter in `[0, min_delay)
-    /// to current delay.
+    /// When jitter is enabled, [`ExponentialBackoff`] will add a random jitter within `(0, min_delay)`
+    /// to the current delay.
     pub fn with_jitter(mut self) -> Self {
         self.jitter = true;
         self
     }
 
-    /// Set factor of current backoff.
+    /// Set the factor for the backoff.
     ///
     /// # Panics
     ///
-    /// This function will panic if input factor smaller than `1.0`.
+    /// This function will panic if the input factor is less than `1.0`.
     pub fn with_factor(mut self, factor: f32) -> Self {
         debug_assert!(factor >= 1.0, "invalid factor that lower than 1");
 
@@ -77,23 +77,23 @@ impl ExponentialBuilder {
         self
     }
 
-    /// Set min_delay of current backoff.
+    /// Set the minimum delay for the backoff.
     pub fn with_min_delay(mut self, min_delay: Duration) -> Self {
         self.min_delay = min_delay;
         self
     }
 
-    /// Set max_delay of current backoff.
+    /// Set the maximum delay for the backoff.
     ///
-    /// Delay will not increasing if current delay is larger than max_delay.
+    /// The delay will not increase if the current delay exceeds the maximum delay.
     pub fn with_max_delay(mut self, max_delay: Duration) -> Self {
         self.max_delay = Some(max_delay);
         self
     }
 
-    /// Set max_times of current backoff.
+    /// Set the maximum number of attempts for the current backoff.
     ///
-    /// Backoff will return `None` if max times is reaching.
+    /// The backoff will stop if the maximum number of attempts is reached.
     pub fn with_max_times(mut self, max_times: usize) -> Self {
         self.max_times = Some(max_times);
         self
@@ -117,7 +117,10 @@ impl BackoffBuilder for ExponentialBuilder {
     }
 }
 
-/// Exponential backoff implementation.
+/// ExponentialBackoff provides a delay with exponential retries.
+///
+/// This backoff strategy is constructed by [`ExponentialBuilder`].
+#[doc(hidden)]
 #[derive(Debug)]
 pub struct ExponentialBackoff {
     jitter: bool,
@@ -169,6 +172,7 @@ impl Iterator for ExponentialBackoff {
     }
 }
 
+#[inline]
 pub(crate) fn saturating_mul(d: Duration, rhs: f32) -> Duration {
     match Duration::try_from_secs_f32(rhs * d.as_secs_f32()) {
         Ok(v) => v,

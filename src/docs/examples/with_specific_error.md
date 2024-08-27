@@ -6,7 +6,7 @@ use backon::ExponentialBuilder;
 use backon::Retryable;
 
 async fn fetch() -> Result<String> {
-    Ok("Hello, Workd!".to_string())
+    Ok("Hello, World!".to_string())
 }
 
 #[tokio::main]

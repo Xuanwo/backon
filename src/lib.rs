@@ -21,17 +21,17 @@
 //!
 //! # Backoff
 //!
-//! Any types that implements `Iterator<Item = Duration>` can be used as backoff.
+//! Retry in BackON requires a backoff strategy. BackON will accept a [`BackoffBuilder`] which will generate a new [`Backoff`] for each retry.
 //!
-//! backon also provides backoff implementations with reasonable defaults:
+//! Backon provides several backoff implementations with reasonable defaults:
 //!
-//! - [`ConstantBackoff`]: backoff with constant delay and limited times.
-//! - [`ExponentialBackoff`]: backoff with exponential delay, also provides jitter supports.
-//! - [`FibonacciBackoff`]: backoff with fibonacci delay, also provides jitter supports.
+//! - [`ConstantBuilder`]: backoff with a constant delay, limited to a specific number of attempts.
+//! - [`ExponentialBuilder`]: backoff with an exponential delay, also supports jitter.
+//! - [`FibonacciBuilder`]: backoff with a fibonacci delay, also supports jitter.
 //!
 //! # Retry
 //!
-//! For more examples, please visit [`docs::examples`].
+//! For additional examples, please visit [`docs::examples`].
 //!
 //! ## Retry an async function
 //!

@@ -2,12 +2,12 @@ use std::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 
-/// ConstantBuilder is used to build [`ConstantBackoff`]
+/// ConstantBuilder is used to create a [`ConstantBackoff`], providing a steady delay with a fixed number of retries.
 ///
 /// # Default
 ///
 /// - delay: 1s
-/// - max times: 3
+/// - max_times: 3
 ///
 /// # Examples
 ///
@@ -49,19 +49,21 @@ impl Default for ConstantBuilder {
 }
 
 impl ConstantBuilder {
-    /// Set delay of current backoff.
+    /// Set the delay for the backoff.
     pub fn with_delay(mut self, delay: Duration) -> Self {
         self.delay = delay;
         self
     }
 
-    /// Set max times of current backoff.
+    /// Set the maximum duration for the backoff.
     pub fn with_max_times(mut self, max_times: usize) -> Self {
         self.max_times = Some(max_times);
         self
     }
 
-    /// Set jitter on
+    /// Set jitter for the backoff.
+    ///
+    /// Jitter is a random value added to the delay to prevent a thundering herd problem.
     pub fn with_jitter(mut self) -> Self {
         self.jitter = true;
         self
@@ -82,7 +84,10 @@ impl BackoffBuilder for ConstantBuilder {
     }
 }
 
-/// ConstantBackoff provides backoff with constant delay and limited times.
+/// ConstantBackoff offers a consistent delay with a limited number of retries.
+///
+/// This backoff strategy is constructed by [`ConstantBuilder`].
+#[doc(hidden)]
 #[derive(Debug)]
 pub struct ConstantBackoff {
     delay: Duration,
@@ -90,17 +95,6 @@ pub struct ConstantBackoff {
 
     attempts: usize,
     jitter: bool,
-}
-
-impl Default for ConstantBackoff {
-    fn default() -> Self {
-        Self {
-            delay: Duration::from_secs(1),
-            max_times: Some(3),
-            attempts: 0,
-            jitter: false,
-        }
-    }
 }
 
 impl Iterator for ConstantBackoff {
