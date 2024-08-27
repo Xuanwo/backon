@@ -24,7 +24,7 @@ jobs:
       - name: Format
         run: cargo fmt --all -- --check
       - name: Clippy
-        run: cargo clippy --all-features --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-features --all-targets -- -D warnings
 
   msrv-check:
     runs-on: ubuntu-latest
@@ -33,7 +33,7 @@ jobs:
       - name: Install
         run: rustup toolchain install ${BACKON_MSRV}
       - name: Check MSRV
-        run: cargo +${BACKON_MSRV} build
+        run: cargo +${BACKON_MSRV} build --workspace
         env:
           RUST_LOG: DEBUG
           RUST_BACKTRACE: full
@@ -49,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Test
-        run: cargo test --all-features
+        run: cargo test --all-features --workspace
         env:
           RUST_LOG: DEBUG
           RUST_BACKTRACE: full
@@ -60,7 +60,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install nightly
       - name: Test
-        run: cargo +nightly test --all-features
+        run: cargo +nightly test --all-features --workspace
         env:
           RUST_LOG: DEBUG
           RUST_BACKTRACE: full
@@ -73,6 +73,7 @@ jobs:
       - name: Install
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run: wasm-pack test --node --all-features -- --skip blocking
+        working-directory: backon
         env:
           RUST_LOG: DEBUG
           RUST_BACKTRACE: full
