@@ -13,6 +13,7 @@ Retry an async function which takes `&self` as receiver.
      }
  }
 
+
  #[tokio::main(flavor = "current_thread")]
  async fn main() -> Result<()> {
      let test = Test;
