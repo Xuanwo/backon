@@ -1,4 +1,4 @@
-use std::{
+use core::{
     future::{Future, Ready},
     time::Duration,
 };

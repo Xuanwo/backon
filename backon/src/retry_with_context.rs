@@ -1,9 +1,9 @@
-use std::future::Future;
-use std::pin::Pin;
-use std::task::ready;
-use std::task::Context;
-use std::task::Poll;
-use std::time::Duration;
+use core::future::Future;
+use core::pin::Pin;
+use core::task::ready;
+use core::task::Context;
+use core::task::Poll;
+use core::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 use crate::Backoff;
@@ -241,7 +241,7 @@ where
     /// # Examples
     ///
     /// ```no_run
-    /// use std::time::Duration;
+    /// use core::time::Duration;
     ///
     /// use anyhow::Result;
     /// use backon::ExponentialBuilder;
@@ -362,7 +362,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use core::time::Duration;
 
     use anyhow::{anyhow, Result};
     use tokio::sync::Mutex;

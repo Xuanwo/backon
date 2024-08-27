@@ -39,7 +39,7 @@
 //! use anyhow::Result;
 //! use backon::ExponentialBuilder;
 //! use backon::Retryable;
-//! use std::time::Duration;
+//! use core::time::Duration;
 //!
 //! async fn fetch() -> Result<String> {
 //!     Ok("hello, world!".to_string())
@@ -69,7 +69,7 @@
 //! use anyhow::Result;
 //! use backon::BlockingRetryable;
 //! use backon::ExponentialBuilder;
-//! use std::time::Duration;
+//! use core::time::Duration;
 //!
 //! fn fetch() -> Result<String> {
 //!     Ok("hello, world!".to_string())
@@ -95,6 +95,10 @@
 #![deny(missing_docs)]
 #![deny(unused_qualifications)]
 
+#![no_std]
+#[cfg(feature = "std")]
+extern crate std;
+
 mod backoff;
 pub use backoff::*;
 
@@ -114,13 +118,15 @@ pub use sleep::Sleeper;
 #[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 pub use sleep::TokioSleeper;
 
+#[cfg(feature = "std")]
 mod blocking_retry;
-pub use blocking_retry::BlockingRetry;
-pub use blocking_retry::BlockingRetryable;
+#[cfg(feature = "std")]
+pub use blocking_retry::{BlockingRetry, BlockingRetryable};
 
+#[cfg(feature = "std")]
 mod blocking_retry_with_context;
-pub use blocking_retry_with_context::BlockingRetryWithContext;
-pub use blocking_retry_with_context::BlockingRetryableWithContext;
+#[cfg(feature = "std")]
+pub use blocking_retry_with_context::{BlockingRetryWithContext, BlockingRetryableWithContext};
 
 #[cfg(docsrs)]
 pub mod docs;

@@ -1,5 +1,5 @@
 use std::thread;
-use std::time::Duration;
+use core::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 use crate::Backoff;
@@ -138,7 +138,7 @@ where
     /// # Examples
     ///
     /// ```no_run
-    /// use std::time::Duration;
+    /// use core::time::Duration;
     ///
     /// use anyhow::Result;
     /// use backon::BlockingRetryable;
@@ -171,7 +171,7 @@ where
 
     /// Call the retried function.
     ///
-    /// TODO: implement [`std::ops::FnOnce`] after it stable.
+    /// TODO: implement [`FnOnce`] after it stable.
     pub fn call(mut self) -> Result<T, E> {
         loop {
             let result = (self.f)();
@@ -199,7 +199,7 @@ where
 #[cfg(test)]
 mod tests {
     use std::sync::Mutex;
-    use std::time::Duration;
+    use core::time::Duration;
 
     use super::*;
     use crate::ExponentialBuilder;

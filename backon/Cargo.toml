@@ -12,15 +12,17 @@ repository.workspace = true
 [package.metadata.docs.rs]
 all-features = true
 targets = [
-  "x86_64-unknown-linux-gnu",
-  "x86_64-apple-darwin",
-  "x86_64-pc-windows-msvc",
-  "wasm32-unknown-unknown",
+    "x86_64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+    "wasm32-unknown-unknown",
 ]
 
 [features]
 gloo-timers-sleep = ["dep:gloo-timers", "gloo-timers?/futures"]
 tokio-sleep = ["dep:tokio", "tokio?/time"]
+default = ["std"]
+std = []
 
 [dependencies]
 fastrand = "2.0.0"
@@ -37,18 +39,18 @@ reqwest = "0.12"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 tokio = { version = "1", features = [
-  "macros",
-  "rt",
-  "sync",
+    "macros",
+    "rt",
+    "sync",
 ], default-features = false }
 wasm-bindgen-test = "0.3"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 sqlx = { version = "0.8.0", features = ["runtime-tokio", "sqlite"] }
 tokio = { version = "1", features = [
-  "time",
-  "rt",
-  "macros",
-  "sync",
-  "rt-multi-thread",
+    "time",
+    "rt",
+    "macros",
+    "sync",
+    "rt-multi-thread",
 ] }
