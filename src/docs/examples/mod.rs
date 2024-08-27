@@ -6,6 +6,9 @@ pub mod basic {}
 #[doc = include_str!("closure.md")]
 pub mod closure {}
 
+#[doc = include_str!("inside_mut_self.md")]
+pub mod inside_mut_self {}
+
 #[doc = include_str!("sqlx.md")]
 pub mod sqlx {}
 
