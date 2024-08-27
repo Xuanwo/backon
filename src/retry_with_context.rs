@@ -10,17 +10,17 @@ use crate::Backoff;
 use crate::DefaultSleeper;
 use crate::Sleeper;
 
-/// RetryableWithContext will add retry support for functions that produces a futures with results
+/// `RetryableWithContext` adds retry support for functions that produce futures with results
 /// and context.
 ///
-/// That means all types that implement `FnMut(Ctx) -> impl Future<Output = (Ctx, Result<T, E>)>`
-/// will be able to use `retry`.
+/// This means all types implementing `FnMut(Ctx) -> impl Future<Output = (Ctx, Result<T, E>)>`
+/// can use `retry`.
 ///
-/// This will allow users to pass a context to the function and return it back while retry finish.
+/// Users must provide context to the function and can receive it back after the retry is completed.
 ///
 /// # Example
 ///
-/// Without context, we could meet errors like the following:
+/// Without context, we might encounter errors such as the following:
 ///
 /// ```shell
 /// error: captured variable cannot escape `FnMut` closure body
@@ -40,7 +40,7 @@ use crate::Sleeper;
 ///     = note: ...therefore, they cannot allow references to captured variables to escape
 /// ```
 ///
-/// But with context support, we can implement in this way:
+/// However, with context support, we can implement it this way:
 ///
 /// ```no_run
 /// use anyhow::anyhow;
@@ -126,10 +126,6 @@ where
     FutureFn: FnMut(Ctx) -> Fut,
 {
     /// Create a new retry.
-    ///
-    /// # Notes
-    ///
-    /// `context` must be set by `context` method before calling `await`.
     fn new(future_fn: FutureFn, backoff: B) -> Self {
         RetryWithContext {
             backoff,
@@ -154,7 +150,9 @@ where
 {
     /// Set the sleeper for retrying.
     ///
-    /// If not specified, we use the default sleeper that enabled by feature flag.
+    /// If not specified, we use the [`DefaultSleeper`].
+    ///
+    /// The sleeper should implement the [`Sleeper`] trait. The simplest way is to use a closure that returns a `Future<Output=()>`.
     pub fn sleep<SN: Sleeper>(
         self,
         sleep_fn: SN,
@@ -175,6 +173,8 @@ where
     }
 
     /// Set the context for retrying.
+    ///
+    /// Context is used to capture ownership manually to prevent lifetime issues.
     pub fn context(
         self,
         context: Ctx,
@@ -191,7 +191,7 @@ where
 
     /// Set the conditions for retrying.
     ///
-    /// If not specified, we treat all errors as retryable.
+    /// If not specified, all errors are considered retryable.
     ///
     /// # Examples
     ///
@@ -232,9 +232,11 @@ where
         }
     }
 
-    /// Set to notify for everything retrying.
+    /// Set to notify for all retry attempts.
     ///
-    /// If not specified, this is a no-op.
+    /// When a retry happens, the input function will be invoked with the error and the sleep duration before pausing.
+    ///
+    /// If not specified, this operation does nothing.
     ///
     /// # Examples
     ///
@@ -284,7 +286,6 @@ where
 enum State<T, E, Ctx, Fut: Future<Output = (Ctx, Result<T, E>)>, SleepFut: Future<Output = ()>> {
     Idle(Option<Ctx>),
     Polling(Fut),
-    // TODO: we need to support other sleeper
     Sleeping((Option<Ctx>, SleepFut)),
 }
 

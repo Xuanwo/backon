@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 
-/// FibonacciBuilder is used to build a [`FibonacciBackoff`]
+/// FibonacciBuilder is used to build a [`FibonacciBackoff`] which offers a delay with Fibonacci-based retries.
 ///
 /// # Default
 ///
@@ -53,32 +53,31 @@ impl Default for FibonacciBuilder {
 }
 
 impl FibonacciBuilder {
-    /// Set jitter of current backoff.
+    /// Set the jitter for the backoff.
     ///
-    /// If jitter is enabled, FibonacciBackoff will add a random jitter in `[0, min_delay)
-    /// to current delay.
+    /// When jitter is enabled, FibonacciBackoff will add a random jitter between `(0, min_delay)` to the delay.
     pub fn with_jitter(mut self) -> Self {
         self.jitter = true;
         self
     }
 
-    /// Set min_delay of current backoff.
+    /// Set the minimum delay for the backoff.
     pub fn with_min_delay(mut self, min_delay: Duration) -> Self {
         self.min_delay = min_delay;
         self
     }
 
-    /// Set max_delay of current backoff.
+    /// Set the maximum delay for the current backoff.
     ///
-    /// Delay will not increasing if current delay is larger than max_delay.
+    /// The delay will not increase if the current delay exceeds the maximum delay.
     pub fn with_max_delay(mut self, max_delay: Duration) -> Self {
         self.max_delay = Some(max_delay);
         self
     }
 
-    /// Set max_times of current backoff.
+    /// Set the maximum number of attempts for the current backoff.
     ///
-    /// Backoff will return `None` if max times is reaching.
+    /// The backoff will stop if the maximum number of attempts is reached.
     pub fn with_max_times(mut self, max_times: usize) -> Self {
         self.max_times = Some(max_times);
         self
@@ -102,7 +101,10 @@ impl BackoffBuilder for FibonacciBuilder {
     }
 }
 
-/// Fibonacci backoff implementation.
+/// FibonacciBackoff offers a delay with Fibonacci-based retries.
+///
+/// This backoff strategy is constructed by [`FibonacciBuilder`].
+#[doc(hidden)]
 #[derive(Debug)]
 pub struct FibonacciBackoff {
     jitter: bool,
