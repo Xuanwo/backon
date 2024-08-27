@@ -94,7 +94,6 @@
 
 #![deny(missing_docs)]
 #![deny(unused_qualifications)]
-
 #![no_std]
 #[cfg(feature = "std")]
 extern crate std;

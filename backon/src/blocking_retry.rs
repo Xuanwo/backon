@@ -1,5 +1,5 @@
-use std::thread;
 use core::time::Duration;
+use std::thread;
 
 use crate::backoff::BackoffBuilder;
 use crate::Backoff;
@@ -198,8 +198,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Mutex;
     use core::time::Duration;
+    use std::sync::Mutex;
 
     use super::*;
     use crate::ExponentialBuilder;
