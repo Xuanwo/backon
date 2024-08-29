@@ -29,6 +29,7 @@ pub type DefaultSleeper = TokioSleeper;
 pub type DefaultSleeper = GlooTimersSleep;
 
 /// The no-op implementation of `Sleeper` that does nothing.
+#[derive(Clone, Copy, Debug, Default)]
 pub struct NoopSleeper;
 
 impl Sleeper for NoopSleeper {
