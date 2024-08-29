@@ -4,7 +4,7 @@ use std::{
 };
 
 /// A sleeper is used to generate a future that completes after a specified duration.
-pub trait Sleeper {
+pub trait Sleeper: 'static {
     /// The future returned by the `sleep` method.
     type Sleep: Future<Output = ()>;
 
@@ -12,32 +12,34 @@ pub trait Sleeper {
     fn sleep(&self, dur: Duration) -> Self::Sleep;
 }
 
-/// The default implementation of `Sleeper`.
+/// The default implementation of `Sleeper` is a no-op when no features are enabled.
 ///
-/// - Under `tokio-sleep` feature, it uses `tokio::time::sleep`.
-/// - Under `gloo-timers-sleep` feature, it uses `gloo_timers::sleep::sleep`.
+/// It will panic on `debug` profile and do nothing on `release` profile.
 #[cfg(all(not(feature = "tokio-sleep"), not(feature = "gloo-timers-sleep")))]
-pub type DefaultSleeper = ();
-/// The default implementation of `Sleeper` based on enabled feature flag.
+pub type DefaultSleeper = NoopSleeper;
+/// The default implementation of `Sleeper` while feature `tokio-sleep` enabled.
 ///
-/// Under `tokio-sleep` feature, it uses `tokio::time::sleep`.
+/// it uses `tokio::time::sleep`.
 #[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 pub type DefaultSleeper = TokioSleeper;
-/// The default implementation of `Sleeper` based on enabled feature flag.
+/// The default implementation of `Sleeper` while feature `gloo-timers-sleep` enabled.
 ///
-/// Under `gloo-timers-sleep` feature, it uses `gloo_timers::sleep::sleep`.
+/// It uses `gloo_timers::sleep::sleep`.
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 pub type DefaultSleeper = GlooTimersSleep;
 
-impl Sleeper for () {
+/// The no-op implementation of `Sleeper` that does nothing.
+pub struct NoopSleeper;
+
+impl Sleeper for NoopSleeper {
     type Sleep = Ready<()>;
 
     fn sleep(&self, _: Duration) -> Self::Sleep {
-        panic!("no sleeper has been configured, consider enabling features or provide a custom implementation")
+        std::future::ready(())
     }
 }
 
-impl<F: Fn(Duration) -> Fut, Fut: Future<Output = ()>> Sleeper for F {
+impl<F: Fn(Duration) -> Fut + 'static, Fut: Future<Output = ()>> Sleeper for F {
     type Sleep = Fut;
 
     fn sleep(&self, dur: Duration) -> Self::Sleep {
