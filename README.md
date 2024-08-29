@@ -34,6 +34,8 @@ async fn main() -> Result<()> {
     let content = fetch
         // Retry with exponential backoff
         .retry(ExponentialBuilder::default())
+        // Sleep implementation, required if no feature has been enabled
+        .sleep(tokio::time::sleep)
         // When to retry
         .when(|e| e.to_string() == "EOF")
         // Notify when retrying
