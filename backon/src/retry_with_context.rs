@@ -302,6 +302,11 @@ where
     type Output = (Ctx, Result<T, E>);
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        #[cfg(debug_assertions)]
+        if std::any::TypeId::of::<SF>() == std::any::TypeId::of::<crate::NoopSleeper>() {
+            panic!("BackON: No sleeper has been configured. Please enable the features or provide a custom implementation.")
+        }
+
         // Safety: This is safe because we don't move the `Retry` struct itself,
         // only its internal state.
         //

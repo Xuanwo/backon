@@ -33,12 +33,14 @@
 //!
 //! Retry in BackON requires an implementation for sleeping. BackON will accept a [`Sleeper`] to pause for a specified duration.
 //!
-//! BackON offers the following features for users to choose from:
+//! BackON employs the following default sleep implementations:
 //!
-//! - `tokio-sleep`: Use [`TokioSleeper`] within a Tokio context.
-//! - `gloo-timers-sleep`: Use [`GlooTimersSleep`] to pause in a wasm32 environment.
+//! - `tokio-sleep`: Utilizes [`TokioSleeper`] within a Tokio context in non-wasm32 environments.
+//! - `gloo-timers-sleep`: Utilizes [`GlooTimersSleep`] to pause in wasm32 environments.
 //!
-//! Users MUST provide a custom implementation if they prefer not to use the default options.
+//! Users CAN provide a custom implementation if they prefer not to use the default options.
+//!
+//! If neither feature is enabled nor a custom implementation is provided, BackON will fallback to an empty sleeper. This will cause a panic in the `debug` profile and do nothing in the `release` profile.
 //!
 //! # Retry
 //!
@@ -123,6 +125,7 @@ mod sleep;
 pub use sleep::DefaultSleeper;
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 pub use sleep::GlooTimersSleep;
+pub(crate) use sleep::NoopSleeper;
 pub use sleep::Sleeper;
 #[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 pub use sleep::TokioSleeper;

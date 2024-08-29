@@ -20,11 +20,12 @@ targets = [
 ]
 
 [features]
+default = ["tokio-sleep", "gloo-timers-sleep"]
 gloo-timers-sleep = ["dep:gloo-timers", "gloo-timers?/futures"]
 tokio-sleep = ["dep:tokio", "tokio?/time"]
 
 [dependencies]
-fastrand = "2.0.0"
+fastrand = "2"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1", optional = true }
