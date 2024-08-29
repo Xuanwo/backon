@@ -23,11 +23,22 @@
 //!
 //! Retry in BackON requires a backoff strategy. BackON will accept a [`BackoffBuilder`] which will generate a new [`Backoff`] for each retry.
 //!
-//! Backon provides several backoff implementations with reasonable defaults:
+//! BackON provides several backoff implementations with reasonable defaults:
 //!
 //! - [`ConstantBuilder`]: backoff with a constant delay, limited to a specific number of attempts.
 //! - [`ExponentialBuilder`]: backoff with an exponential delay, also supports jitter.
 //! - [`FibonacciBuilder`]: backoff with a fibonacci delay, also supports jitter.
+//!
+//! # Sleep
+//!
+//! Retry in BackON requires an implementation for sleeping. BackON will accept a [`Sleeper`] to pause for a specified duration.
+//!
+//! BackON offers the following features for users to choose from:
+//!
+//! - `tokio-sleep`: Use [`TokioSleeper`] within a Tokio context.
+//! - `gloo-timers-sleep`: Use [`GlooTimersSleep`] to pause in a wasm32 environment.
+//!
+//! Users MUST provide a custom implementation if they prefer not to use the default options.
 //!
 //! # Retry
 //!
@@ -50,6 +61,8 @@
 //!     let content = fetch
 //!         // Retry with exponential backoff
 //!         .retry(ExponentialBuilder::default())
+//!         // Sleep implementation, default to tokio::time::sleep if `tokio-sleep` has been enabled.
+//!         .sleep(tokio::time::sleep)
 //!         // When to retry
 //!         .when(|e| e.to_string() == "EOF")
 //!         // Notify when retrying
