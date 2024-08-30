@@ -1,8 +1,8 @@
-use std::thread;
 use std::time::Duration;
 
 use crate::backoff::BackoffBuilder;
-use crate::Backoff;
+use crate::blocking_sleep::MaybeBlockingSleeper;
+use crate::{Backoff, BlockingSleeper, DefaultBlockingSleeper};
 
 /// BlockingRetryable adds retry support for blocking functions.
 ///
@@ -63,6 +63,7 @@ pub struct BlockingRetry<
     T,
     E,
     F: FnMut() -> Result<T, E>,
+    SF: MaybeBlockingSleeper = DefaultBlockingSleeper,
     RF = fn(&E) -> bool,
     NF = fn(&E, Duration),
 > {
@@ -70,6 +71,7 @@ pub struct BlockingRetry<
     retryable: RF,
     notify: NF,
     f: F,
+    sleep_fn: SF,
 }
 
 impl<B, T, E, F> BlockingRetry<B, T, E, F>
@@ -83,18 +85,57 @@ where
             backoff,
             retryable: |_: &E| true,
             notify: |_: &E, _: Duration| {},
+            sleep_fn: DefaultBlockingSleeper::default(),
             f,
         }
     }
 }
 
-impl<B, T, E, F, RF, NF> BlockingRetry<B, T, E, F, RF, NF>
+impl<B, T, E, F, SF, RF, NF> BlockingRetry<B, T, E, F, SF, RF, NF>
 where
     B: Backoff,
     F: FnMut() -> Result<T, E>,
+    SF: MaybeBlockingSleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
 {
+    /// Set the sleeper for retrying.
+    ///
+    /// The sleeper should implement the [`BlockingSleeper`] trait. The simplest way is to use a closure like  `Fn(Duration)`.
+    ///
+    /// If not specified, we use the [`DefaultBlockingSleeper`].
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use anyhow::Result;
+    /// use backon::BlockingRetryable;
+    /// use backon::ExponentialBuilder;
+    ///
+    /// fn fetch() -> Result<String> {
+    ///     Ok("hello, world!".to_string())
+    /// }
+    ///
+    /// fn main() -> Result<()> {
+    ///     let retry = fetch
+    ///         .retry(ExponentialBuilder::default())
+    ///         .sleep(std::thread::sleep);
+    ///     let content = retry.call()?;
+    ///     println!("fetch succeeded: {}", content);
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn sleep<SN: BlockingSleeper>(self, sleep_fn: SN) -> BlockingRetry<B, T, E, F, SN, RF, NF> {
+        BlockingRetry {
+            backoff: self.backoff,
+            retryable: self.retryable,
+            notify: self.notify,
+            f: self.f,
+            sleep_fn,
+        }
+    }
+
     /// Set the conditions for retrying.
     ///
     /// If not specified, all errors are considered retryable.
@@ -120,12 +161,16 @@ where
     ///     Ok(())
     /// }
     /// ```
-    pub fn when<RN: FnMut(&E) -> bool>(self, retryable: RN) -> BlockingRetry<B, T, E, F, RN, NF> {
+    pub fn when<RN: FnMut(&E) -> bool>(
+        self,
+        retryable: RN,
+    ) -> BlockingRetry<B, T, E, F, SF, RN, NF> {
         BlockingRetry {
             backoff: self.backoff,
             retryable,
             notify: self.notify,
             f: self.f,
+            sleep_fn: self.sleep_fn,
         }
     }
 
@@ -160,15 +205,28 @@ where
     ///     Ok(())
     /// }
     /// ```
-    pub fn notify<NN: FnMut(&E, Duration)>(self, notify: NN) -> BlockingRetry<B, T, E, F, RF, NN> {
+    pub fn notify<NN: FnMut(&E, Duration)>(
+        self,
+        notify: NN,
+    ) -> BlockingRetry<B, T, E, F, SF, RF, NN> {
         BlockingRetry {
             backoff: self.backoff,
             retryable: self.retryable,
             notify,
             f: self.f,
+            sleep_fn: self.sleep_fn,
         }
     }
+}
 
+impl<B, T, E, F, SF, RF, NF> BlockingRetry<B, T, E, F, SF, RF, NF>
+where
+    B: Backoff,
+    F: FnMut() -> Result<T, E>,
+    SF: BlockingSleeper,
+    RF: FnMut(&E) -> bool,
+    NF: FnMut(&E, Duration),
+{
     /// Call the retried function.
     ///
     /// TODO: implement [`std::ops::FnOnce`] after it stable.
@@ -187,7 +245,7 @@ where
                         None => return Err(err),
                         Some(dur) => {
                             (self.notify)(&err, dur);
-                            thread::sleep(dur);
+                            self.sleep_fn.sleep(dur);
                         }
                     }
                 }
@@ -195,7 +253,6 @@ where
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use std::sync::Mutex;

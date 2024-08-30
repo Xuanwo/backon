@@ -137,5 +137,11 @@ mod blocking_retry_with_context;
 pub use blocking_retry_with_context::BlockingRetryWithContext;
 pub use blocking_retry_with_context::BlockingRetryableWithContext;
 
+mod blocking_sleep;
+pub use blocking_sleep::BlockingSleeper;
+pub use blocking_sleep::DefaultBlockingSleeper;
+#[cfg(feature = "std-blocking-sleep")]
+pub use blocking_sleep::StdSleeper;
+
 #[cfg(docsrs)]
 pub mod docs;

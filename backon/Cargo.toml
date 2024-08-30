@@ -20,7 +20,8 @@ targets = [
 ]
 
 [features]
-default = ["tokio-sleep", "gloo-timers-sleep"]
+default = ["std-blocking-sleep", "tokio-sleep", "gloo-timers-sleep"]
+std-blocking-sleep = []
 gloo-timers-sleep = ["dep:gloo-timers", "gloo-timers?/futures"]
 tokio-sleep = ["dep:tokio", "tokio?/time"]
 
