@@ -324,7 +324,7 @@ mod default_sleeper_tests {
     use alloc::string::ToString;
     use alloc::vec;
     use alloc::vec::Vec;
-    use core::{future::ready, time::Duration};
+    use core::time::Duration;
     use tokio::sync::Mutex;
 
     #[cfg(target_arch = "wasm32")]
@@ -432,7 +432,8 @@ mod default_sleeper_tests {
 
 #[cfg(test)]
 mod custom_sleeper_tests {
-    use std::{future::ready, time::Duration};
+    use alloc::string::ToString;
+    use core::{future::ready, time::Duration};
 
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;

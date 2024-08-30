@@ -1,5 +1,4 @@
 use core::time::Duration;
-use std::thread;
 
 use crate::backoff::BackoffBuilder;
 use crate::blocking_sleep::MaybeBlockingSleeper;

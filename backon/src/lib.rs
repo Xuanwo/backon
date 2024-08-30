@@ -110,9 +110,11 @@
 #![deny(missing_docs)]
 #![deny(unused_qualifications)]
 #![no_std]
-#[cfg(feature = "std")]
-extern crate alloc;
+
+#[cfg(feature = "std-blocking-sleep")]
 extern crate std;
+
+extern crate alloc;
 
 mod backoff;
 pub use backoff::*;
@@ -133,14 +135,10 @@ pub use sleep::Sleeper;
 #[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 pub use sleep::TokioSleeper;
 
-#[cfg(feature = "std")]
 mod blocking_retry;
-#[cfg(feature = "std")]
 pub use blocking_retry::{BlockingRetry, BlockingRetryable};
 
-#[cfg(feature = "std")]
 mod blocking_retry_with_context;
-#[cfg(feature = "std")]
 pub use blocking_retry_with_context::{BlockingRetryWithContext, BlockingRetryableWithContext};
 
 mod blocking_sleep;

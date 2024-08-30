@@ -1,5 +1,4 @@
 use core::time::Duration;
-use std::thread;
 
 use crate::backoff::BackoffBuilder;
 use crate::blocking_sleep::MaybeBlockingSleeper;
@@ -189,7 +188,7 @@ mod tests {
     use anyhow::anyhow;
     use anyhow::Result;
     use core::time::Duration;
-    use std::sync::Mutex;
+    use spin::Mutex;
 
     struct Test;
 
@@ -209,7 +208,7 @@ mod tests {
 
         let (_, result) = {
             |mut v: Test| {
-                let mut x = error_times.lock().unwrap();
+                let mut x = error_times.lock();
                 *x += 1;
 
                 let res = v.hello();
@@ -226,7 +225,7 @@ mod tests {
         assert_eq!("not retryable", result.unwrap_err().to_string());
         // `f` always returns error "not retryable", so it should be executed
         // only once.
-        assert_eq!(*error_times.lock().unwrap(), 1);
+        assert_eq!(*error_times.lock(), 1);
         Ok(())
     }
 }

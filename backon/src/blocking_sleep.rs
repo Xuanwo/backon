@@ -1,4 +1,4 @@
-use std::time::Duration;
+use core::time::Duration;
 
 /// A sleeper is used sleep for a specified duration.
 pub trait BlockingSleeper: 'static {
@@ -24,7 +24,7 @@ impl<F: Fn(Duration) + 'static> BlockingSleeper for F {
 /// The default implementation of `Sleeper` when no features are enabled.
 ///
 /// It will fail to compile if a containing [`Retry`][crate::Retry] is `.await`ed without calling [`Retry::sleep`][crate::Retry::sleep] to provide a valid sleeper.
-#[cfg(all(not(feature = "tokio-sleep"), not(feature = "gloo-timers-sleep")))]
+#[cfg(not(feature = "std-blocking-sleep"))]
 pub type DefaultBlockingSleeper = PleaseEnableAFeatureOrProvideACustomSleeper;
 /// The default implementation of `Sleeper` while feature `std-blocking-sleep` enabled.
 ///
