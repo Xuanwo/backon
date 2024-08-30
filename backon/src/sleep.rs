@@ -3,6 +3,9 @@ use std::{
     time::Duration,
 };
 
+#[cfg(doc)]
+use crate::Retry;
+
 /// A sleeper is used to generate a future that completes after a specified duration.
 pub trait Sleeper: 'static {
     /// The future returned by the `sleep` method.
@@ -12,11 +15,18 @@ pub trait Sleeper: 'static {
     fn sleep(&self, dur: Duration) -> Self::Sleep;
 }
 
-/// The default implementation of `Sleeper` is a no-op when no features are enabled.
-///
-/// It will panic on `debug` profile and do nothing on `release` profile.
+/// A stub trait allowing non-[`Sleeper`] types to be used as a generic parameter in [`Retry`].
+/// It does not provide actual functionality.
+#[doc(hidden)]
+pub trait MayBeDefaultSleeper: 'static {
+    type Sleep: Future<Output = ()>;
+}
+
+/// The default implementation of `Sleeper` when no features are enabled.
+/// It will fail to compile if a containing [`Retry`] is `.await`ed without calling [`Retry::sleep`]
+/// to provide a valid sleeper.
 #[cfg(all(not(feature = "tokio-sleep"), not(feature = "gloo-timers-sleep")))]
-pub type DefaultSleeper = NoopSleeper;
+pub type DefaultSleeper = PleaseEnableAFeatureForSleeper;
 /// The default implementation of `Sleeper` while feature `tokio-sleep` enabled.
 ///
 /// it uses `tokio::time::sleep`.
@@ -28,16 +38,22 @@ pub type DefaultSleeper = TokioSleeper;
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 pub type DefaultSleeper = GlooTimersSleep;
 
-/// The no-op implementation of `Sleeper` that does nothing.
+/// A stub type that does not implement [`Sleeper`] and hence will fail to compile if used as a
+/// sleeper.
+///
+/// Users are expected to enable a feature of this crate that provides a valid implementation of
+/// [`Sleeper`] when they see this type appearing in compilation errors. Otherwise, a custom [`Sleeper`]
+/// implementation should be provided where needed, such as [`Retry::sleeper`].
+#[doc(hidden)]
 #[derive(Clone, Copy, Debug, Default)]
-pub struct NoopSleeper;
+pub struct PleaseEnableAFeatureForSleeper;
 
-impl Sleeper for NoopSleeper {
+impl MayBeDefaultSleeper for PleaseEnableAFeatureForSleeper {
     type Sleep = Ready<()>;
+}
 
-    fn sleep(&self, _: Duration) -> Self::Sleep {
-        std::future::ready(())
-    }
+impl<T: Sleeper + ?Sized> MayBeDefaultSleeper for T {
+    type Sleep = <T as Sleeper>::Sleep;
 }
 
 impl<F: Fn(Duration) -> Fut + 'static, Fut: Future<Output = ()>> Sleeper for F {
