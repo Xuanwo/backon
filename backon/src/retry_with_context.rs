@@ -6,6 +6,7 @@ use std::task::Poll;
 use std::time::Duration;
 
 use crate::backoff::BackoffBuilder;
+use crate::sleep::MayBeDefaultSleeper;
 use crate::Backoff;
 use crate::DefaultSleeper;
 use crate::Sleeper;
@@ -106,7 +107,7 @@ pub struct RetryWithContext<
     Ctx,
     Fut: Future<Output = (Ctx, Result<T, E>)>,
     FutureFn: FnMut(Ctx) -> Fut,
-    SF: Sleeper = DefaultSleeper,
+    SF: MayBeDefaultSleeper = DefaultSleeper,
     RF = fn(&E) -> bool,
     NF = fn(&E, Duration),
 > {
@@ -303,7 +304,9 @@ where
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         #[cfg(debug_assertions)]
-        if std::any::TypeId::of::<SF>() == std::any::TypeId::of::<crate::NoopSleeper>() {
+        if std::any::TypeId::of::<SF>()
+            == std::any::TypeId::of::<crate::PleaseEnableAFeatureForSleeper>()
+        {
             panic!("BackON: No sleeper has been configured. Please enable the features or provide a custom implementation.")
         }
 
@@ -366,6 +369,7 @@ where
 }
 
 #[cfg(test)]
+#[cfg(any(feature = "tokio-sleep", feature = "gloo-timers-sleep"))]
 mod tests {
     use std::time::Duration;
 

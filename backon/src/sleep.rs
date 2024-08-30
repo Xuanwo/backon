@@ -12,11 +12,16 @@ pub trait Sleeper: 'static {
     fn sleep(&self, dur: Duration) -> Self::Sleep;
 }
 
+#[doc(hidden)]
+pub trait MayBeDefaultSleeper: 'static {
+    type Sleep: Future<Output = ()>;
+}
+
 /// The default implementation of `Sleeper` is a no-op when no features are enabled.
 ///
 /// It will panic on `debug` profile and do nothing on `release` profile.
 #[cfg(all(not(feature = "tokio-sleep"), not(feature = "gloo-timers-sleep")))]
-pub type DefaultSleeper = NoopSleeper;
+pub type DefaultSleeper = PleaseEnableAFeatureForSleeper;
 /// The default implementation of `Sleeper` while feature `tokio-sleep` enabled.
 ///
 /// it uses `tokio::time::sleep`.
@@ -30,14 +35,14 @@ pub type DefaultSleeper = GlooTimersSleep;
 
 /// The no-op implementation of `Sleeper` that does nothing.
 #[derive(Clone, Copy, Debug, Default)]
-pub struct NoopSleeper;
+pub struct PleaseEnableAFeatureForSleeper;
 
-impl Sleeper for NoopSleeper {
+impl MayBeDefaultSleeper for PleaseEnableAFeatureForSleeper {
     type Sleep = Ready<()>;
+}
 
-    fn sleep(&self, _: Duration) -> Self::Sleep {
-        std::future::ready(())
-    }
+impl<T: Sleeper + ?Sized> MayBeDefaultSleeper for T {
+    type Sleep = <T as Sleeper>::Sleep;
 }
 
 impl<F: Fn(Duration) -> Fut + 'static, Fut: Future<Output = ()>> Sleeper for F {
