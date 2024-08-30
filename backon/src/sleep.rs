@@ -4,7 +4,7 @@ use core::{
 };
 
 /// A sleeper is used to generate a future that completes after a specified duration.
-pub trait Sleeper {
+pub trait Sleeper: 'static {
     /// The future returned by the `sleep` method.
     type Sleep: Future<Output = ()>;
 
@@ -12,37 +12,53 @@ pub trait Sleeper {
     fn sleep(&self, dur: Duration) -> Self::Sleep;
 }
 
-/// The default implementation of `Sleeper`.
-///
-/// - Under `tokio-sleep` feature, it uses `tokio::time::sleep`.
-/// - Under `gloo-timers-sleep` feature, it uses `gloo_timers::sleep::sleep`.
-#[cfg(all(not(feature = "tokio-sleep"), not(feature = "gloo-timers-sleep")))]
-pub type DefaultSleeper = ();
-/// The default implementation of `Sleeper` based on enabled feature flag.
-///
-/// Under `tokio-sleep` feature, it uses `tokio::time::sleep`.
-#[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
-pub type DefaultSleeper = TokioSleeper;
-/// The default implementation of `Sleeper` based on enabled feature flag.
-///
-/// Under `gloo-timers-sleep` feature, it uses `gloo_timers::sleep::sleep`.
-#[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
-pub type DefaultSleeper = GlooTimersSleep;
-
-impl Sleeper for () {
-    type Sleep = Ready<()>;
-
-    fn sleep(&self, _: Duration) -> Self::Sleep {
-        panic!("no sleeper has been configured, consider enabling features or provide a custom implementation")
-    }
+/// A stub trait allowing non-[`Sleeper`] types to be used as a generic parameter in [`Retry`][crate::Retry].
+/// It does not provide actual functionality.
+#[doc(hidden)]
+pub trait MaybeSleeper: 'static {
+    type Sleep: Future<Output = ()>;
 }
 
-impl<F: Fn(Duration) -> Fut, Fut: Future<Output = ()>> Sleeper for F {
+/// All `Sleeper` will implement  `MaybeSleeper`, but not vice versa.
+impl<T: Sleeper + ?Sized> MaybeSleeper for T {
+    type Sleep = <T as Sleeper>::Sleep;
+}
+
+/// All `Fn(Duration) -> impl Future<Output = ()>` implements `Sleeper`.
+impl<F: Fn(Duration) -> Fut + 'static, Fut: Future<Output = ()>> Sleeper for F {
     type Sleep = Fut;
 
     fn sleep(&self, dur: Duration) -> Self::Sleep {
         self(dur)
     }
+}
+
+/// The default implementation of `Sleeper` when no features are enabled.
+///
+/// It will fail to compile if a containing [`Retry`][crate::Retry] is `.await`ed without calling [`Retry::sleep`][crate::Retry::sleep] to provide a valid sleeper.
+#[cfg(all(not(feature = "tokio-sleep"), not(feature = "gloo-timers-sleep")))]
+pub type DefaultSleeper = PleaseEnableAFeatureOrProvideACustomSleeper;
+/// The default implementation of `Sleeper` while feature `tokio-sleep` enabled.
+///
+/// it uses `tokio::time::sleep`.
+#[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
+pub type DefaultSleeper = TokioSleeper;
+/// The default implementation of `Sleeper` while feature `gloo-timers-sleep` enabled.
+///
+/// It uses `gloo_timers::sleep::sleep`.
+#[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
+pub type DefaultSleeper = GlooTimersSleep;
+
+/// A placeholder type that does not implement [`Sleeper`] and will therefore fail to compile if used as one.
+///
+/// Users should enable a feature of this crate that provides a valid [`Sleeper`] implementation when this type appears in compilation errors. Alternatively, a custom [`Sleeper`] implementation should be provided where necessary, such as in [`crate::Retry::sleeper`].
+#[doc(hidden)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct PleaseEnableAFeatureOrProvideACustomSleeper;
+
+/// Implement `MaybeSleeper` but not `Sleeper`.
+impl MaybeSleeper for PleaseEnableAFeatureOrProvideACustomSleeper {
+    type Sleep = Ready<()>;
 }
 
 /// The default implementation of `Sleeper` uses `tokio::time::sleep`.

@@ -2,7 +2,8 @@ use core::time::Duration;
 use std::thread;
 
 use crate::backoff::BackoffBuilder;
-use crate::Backoff;
+use crate::blocking_sleep::MaybeBlockingSleeper;
+use crate::{Backoff, BlockingSleeper, DefaultBlockingSleeper};
 
 /// BlockingRetryableWithContext adds retry support for blocking functions.
 pub trait BlockingRetryableWithContext<
@@ -34,6 +35,7 @@ pub struct BlockingRetryWithContext<
     E,
     Ctx,
     F: FnMut(Ctx) -> (Ctx, Result<T, E>),
+    SF: MaybeBlockingSleeper = DefaultBlockingSleeper,
     RF = fn(&E) -> bool,
     NF = fn(&E, Duration),
 > {
@@ -41,6 +43,7 @@ pub struct BlockingRetryWithContext<
     retryable: RF,
     notify: NF,
     f: F,
+    sleep_fn: SF,
     ctx: Option<Ctx>,
 }
 
@@ -55,29 +58,51 @@ where
             backoff,
             retryable: |_: &E| true,
             notify: |_: &E, _: Duration| {},
+            sleep_fn: DefaultBlockingSleeper::default(),
             f,
             ctx: None,
         }
     }
 }
 
-impl<B, T, E, Ctx, F, RF, NF> BlockingRetryWithContext<B, T, E, Ctx, F, RF, NF>
+impl<B, T, E, Ctx, F, SF, RF, NF> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RF, NF>
 where
     B: Backoff,
     F: FnMut(Ctx) -> (Ctx, Result<T, E>),
+    SF: MaybeBlockingSleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
 {
     /// Set the context for retrying.
     ///
     /// Context is used to capture ownership manually to prevent lifetime issues.
-    pub fn context(self, context: Ctx) -> BlockingRetryWithContext<B, T, E, Ctx, F, RF, NF> {
+    pub fn context(self, context: Ctx) -> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RF, NF> {
         BlockingRetryWithContext {
             backoff: self.backoff,
             retryable: self.retryable,
             notify: self.notify,
             f: self.f,
+            sleep_fn: self.sleep_fn,
             ctx: Some(context),
+        }
+    }
+
+    /// Set the sleeper for retrying.
+    ///
+    /// The sleeper should implement the [`BlockingSleeper`] trait. The simplest way is to use a closure like  `Fn(Duration)`.
+    ///
+    /// If not specified, we use the [`DefaultBlockingSleeper`].
+    pub fn sleep<SN: BlockingSleeper>(
+        self,
+        sleep_fn: SN,
+    ) -> BlockingRetryWithContext<B, T, E, Ctx, F, SN, RF, NF> {
+        BlockingRetryWithContext {
+            backoff: self.backoff,
+            retryable: self.retryable,
+            notify: self.notify,
+            f: self.f,
+            sleep_fn,
+            ctx: self.ctx,
         }
     }
 
@@ -87,12 +112,13 @@ where
     pub fn when<RN: FnMut(&E) -> bool>(
         self,
         retryable: RN,
-    ) -> BlockingRetryWithContext<B, T, E, Ctx, F, RN, NF> {
+    ) -> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RN, NF> {
         BlockingRetryWithContext {
             backoff: self.backoff,
             retryable,
             notify: self.notify,
             f: self.f,
+            sleep_fn: self.sleep_fn,
             ctx: self.ctx,
         }
     }
@@ -105,16 +131,26 @@ where
     pub fn notify<NN: FnMut(&E, Duration)>(
         self,
         notify: NN,
-    ) -> BlockingRetryWithContext<B, T, E, Ctx, F, RF, NN> {
+    ) -> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RF, NN> {
         BlockingRetryWithContext {
             backoff: self.backoff,
             retryable: self.retryable,
             notify,
             f: self.f,
+            sleep_fn: self.sleep_fn,
             ctx: self.ctx,
         }
     }
+}
 
+impl<B, T, E, Ctx, F, SF, RF, NF> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RF, NF>
+where
+    B: Backoff,
+    F: FnMut(Ctx) -> (Ctx, Result<T, E>),
+    SF: BlockingSleeper,
+    RF: FnMut(&E) -> bool,
+    NF: FnMut(&E, Duration),
+{
     /// Call the retried function.
     ///
     /// TODO: implement [`FnOnce`] after it stable.
@@ -136,7 +172,7 @@ where
                         None => return (ctx, Err(err)),
                         Some(dur) => {
                             (self.notify)(&err, dur);
-                            thread::sleep(dur);
+                            self.sleep_fn.sleep(dur);
                         }
                     }
                 }

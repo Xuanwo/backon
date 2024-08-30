@@ -6,6 +6,7 @@ use core::task::Poll;
 use core::time::Duration;
 
 use crate::backoff::BackoffBuilder;
+use crate::sleep::MaybeSleeper;
 use crate::Backoff;
 use crate::DefaultSleeper;
 use crate::Sleeper;
@@ -67,7 +68,7 @@ pub struct Retry<
     E,
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
-    SF: Sleeper = DefaultSleeper,
+    SF: MaybeSleeper = DefaultSleeper,
     RF = fn(&E) -> bool,
     NF = fn(&E, Duration),
 > {
@@ -104,15 +105,15 @@ where
     B: Backoff,
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
-    SF: Sleeper,
+    SF: MaybeSleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
 {
     /// Set the sleeper for retrying.
     ///
-    /// If not specified, we use the [`DefaultSleeper`].
-    ///
     /// The sleeper should implement the [`Sleeper`] trait. The simplest way is to use a closure that returns a `Future<Output=()>`.
+    ///
+    /// If not specified, we use the [`DefaultSleeper`].
     ///
     /// ```no_run
     /// use anyhow::Result;
@@ -319,7 +320,7 @@ where
 
 #[cfg(test)]
 #[cfg(any(feature = "tokio-sleep", feature = "gloo-timers-sleep"))]
-mod tests {
+mod default_sleeper_tests {
     use alloc::string::ToString;
     use alloc::vec;
     use alloc::vec::Vec;
@@ -343,18 +344,6 @@ mod tests {
     async fn test_retry() -> anyhow::Result<()> {
         let result = always_error
             .retry(ExponentialBuilder::default().with_min_delay(Duration::from_millis(1)))
-            .await;
-
-        assert!(result.is_err());
-        assert_eq!("test_query meets error", result.unwrap_err().to_string());
-        Ok(())
-    }
-
-    #[test]
-    async fn test_retry_with_sleep() -> anyhow::Result<()> {
-        let result = always_error
-            .retry(ExponentialBuilder::default().with_min_delay(Duration::from_millis(1)))
-            .sleep(|_| ready(()))
             .await;
 
         assert!(result.is_err());
@@ -437,6 +426,36 @@ mod tests {
         // 4 times (retry 3 times).
         assert_eq!(calls_retryable.len(), 4);
         assert_eq!(calls_notify.len(), 3);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod custom_sleeper_tests {
+    use std::{future::ready, time::Duration};
+
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
+
+    #[cfg(not(target_arch = "wasm32"))]
+    use tokio::test;
+
+    use super::*;
+    use crate::ExponentialBuilder;
+
+    async fn always_error() -> anyhow::Result<()> {
+        Err(anyhow::anyhow!("test_query meets error"))
+    }
+
+    #[test]
+    async fn test_retry_with_sleep() -> anyhow::Result<()> {
+        let result = always_error
+            .retry(ExponentialBuilder::default().with_min_delay(Duration::from_millis(1)))
+            .sleep(|_| ready(()))
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!("test_query meets error", result.unwrap_err().to_string());
         Ok(())
     }
 }
