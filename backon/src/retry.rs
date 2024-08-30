@@ -6,7 +6,7 @@ use std::task::Poll;
 use std::time::Duration;
 
 use crate::backoff::BackoffBuilder;
-use crate::sleep::MayBeDefaultSleeper;
+use crate::sleep::MaybeSleeper;
 use crate::Backoff;
 use crate::DefaultSleeper;
 use crate::Sleeper;
@@ -68,7 +68,7 @@ pub struct Retry<
     E,
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
-    SF: MayBeDefaultSleeper = DefaultSleeper,
+    SF: MaybeSleeper = DefaultSleeper,
     RF = fn(&E) -> bool,
     NF = fn(&E, Duration),
 > {
@@ -105,15 +105,15 @@ where
     B: Backoff,
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
-    SF: MayBeDefaultSleeper,
+    SF: MaybeSleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
 {
     /// Set the sleeper for retrying.
     ///
-    /// If not specified, we use the [`DefaultSleeper`].
-    ///
     /// The sleeper should implement the [`Sleeper`] trait. The simplest way is to use a closure that returns a `Future<Output=()>`.
+    ///
+    /// If not specified, we use the [`DefaultSleeper`].
     ///
     /// ```no_run
     /// use anyhow::Result;
