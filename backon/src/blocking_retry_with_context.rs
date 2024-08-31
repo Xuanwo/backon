@@ -1,4 +1,4 @@
-use std::time::Duration;
+use core::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 use crate::blocking_sleep::MaybeBlockingSleeper;
@@ -152,7 +152,7 @@ where
 {
     /// Call the retried function.
     ///
-    /// TODO: implement [`std::ops::FnOnce`] after it stable.
+    /// TODO: implement [`FnOnce`] after it stable.
     pub fn call(mut self) -> (Ctx, Result<T, E>) {
         let mut ctx = self.ctx.take().expect("context must be valid");
         loop {
@@ -182,14 +182,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
-
-    use anyhow::anyhow;
-    use std::sync::Mutex;
-
     use super::*;
     use crate::ExponentialBuilder;
+    use alloc::string::ToString;
+    use anyhow::anyhow;
     use anyhow::Result;
+    use core::time::Duration;
+    use spin::Mutex;
 
     struct Test;
 
@@ -209,7 +208,7 @@ mod tests {
 
         let (_, result) = {
             |mut v: Test| {
-                let mut x = error_times.lock().unwrap();
+                let mut x = error_times.lock();
                 *x += 1;
 
                 let res = v.hello();
@@ -226,7 +225,7 @@ mod tests {
         assert_eq!("not retryable", result.unwrap_err().to_string());
         // `f` always returns error "not retryable", so it should be executed
         // only once.
-        assert_eq!(*error_times.lock().unwrap(), 1);
+        assert_eq!(*error_times.lock(), 1);
         Ok(())
     }
 }

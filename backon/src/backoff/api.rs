@@ -1,5 +1,5 @@
-use std::fmt::Debug;
-use std::time::Duration;
+use core::fmt::Debug;
+use core::time::Duration;
 
 /// BackoffBuilder is utilized to construct a new backoff.
 pub trait BackoffBuilder: Debug + Send + Sync + Unpin {

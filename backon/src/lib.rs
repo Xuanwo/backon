@@ -52,7 +52,7 @@
 //! use anyhow::Result;
 //! use backon::ExponentialBuilder;
 //! use backon::Retryable;
-//! use std::time::Duration;
+//! use core::time::Duration;
 //!
 //! async fn fetch() -> Result<String> {
 //!     Ok("hello, world!".to_string())
@@ -84,7 +84,7 @@
 //! use anyhow::Result;
 //! use backon::BlockingRetryable;
 //! use backon::ExponentialBuilder;
-//! use std::time::Duration;
+//! use core::time::Duration;
 //!
 //! fn fetch() -> Result<String> {
 //!     Ok("hello, world!".to_string())
@@ -109,6 +109,12 @@
 
 #![deny(missing_docs)]
 #![deny(unused_qualifications)]
+#![no_std]
+
+#[cfg(feature = "std-blocking-sleep")]
+extern crate std;
+
+extern crate alloc;
 
 mod backoff;
 pub use backoff::*;
@@ -130,12 +136,10 @@ pub use sleep::Sleeper;
 pub use sleep::TokioSleeper;
 
 mod blocking_retry;
-pub use blocking_retry::BlockingRetry;
-pub use blocking_retry::BlockingRetryable;
+pub use blocking_retry::{BlockingRetry, BlockingRetryable};
 
 mod blocking_retry_with_context;
-pub use blocking_retry_with_context::BlockingRetryWithContext;
-pub use blocking_retry_with_context::BlockingRetryableWithContext;
+pub use blocking_retry_with_context::{BlockingRetryWithContext, BlockingRetryableWithContext};
 
 mod blocking_sleep;
 pub use blocking_sleep::BlockingSleeper;
