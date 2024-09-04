@@ -32,22 +32,22 @@
 //! # Sleep
 //!
 //! Retry in BackON requires an implementation for sleeping. BackON will accept a [`Sleeper`] to pause for a specified duration.
-//! 
+//!
 //! ## Default `Sleeper`
 //!
 //! Currently, BackON has 2 built-in `Sleeper` implementations for different environments,
 //! they are gated under their own features, which are enabled by default:
-//! 
+//!
 //! |      `Sleeper`      | feature          | Environment |
 //! |---------------------|------------------|-------------|
 //! | [`TokioSleeper`]    | tokio-sleep      | non-wasm32  |
 //! | [`GlooTimersSleep`] | gloo-timers-sleep|   wasm32    |
-//! 
+//!
 //! ## Custom `Sleeper`
-//! 
-//! If you do not want to use the built-in `Sleeper`, you CAN provide a custom 
+//!
+//! If you do not want to use the built-in `Sleeper`, you CAN provide a custom
 //! implementation, here is an example that implements a `Sleeper` with `monoio::time::sleep`:
-//! 
+//!
 //! ```rust,ignore
 //! use std::time::Duration;
 //! use backon::Sleeper;
@@ -65,7 +65,7 @@
 //!     }
 //! }
 //! ```
-//! 
+//!
 //! ## The empty `Sleeper`
 //!
 //! If neither feature is enabled nor a custom implementation is provided, BackON will fallback to the empty sleeper. This will cause a panic in the `debug` profile and do nothing in the `release` profile.
