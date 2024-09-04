@@ -32,15 +32,43 @@
 //! # Sleep
 //!
 //! Retry in BackON requires an implementation for sleeping. BackON will accept a [`Sleeper`] to pause for a specified duration.
+//! 
+//! ## Default `Sleeper`
 //!
-//! BackON employs the following default sleep implementations:
+//! Currently, BackON has 2 built-in `Sleeper` implementations for different environments,
+//! they are gated under their own features, which are enabled by default:
+//! 
+//! |      `Sleeper`      | feature          | Environment |
+//! |---------------------|------------------|-------------|
+//! | [`TokioSleeper`]    | tokio-sleep      | non-wasm32  |
+//! | [`GlooTimersSleep`] | gloo-timers-sleep|   wasm32    |
+//! 
+//! ## Custom `Sleeper`
+//! 
+//! If you do not want to use the built-in `Sleeper`, you CAN provide a custom 
+//! implementation, here is an example that implements a `Sleeper` with `monoio::time::sleep`:
+//! 
+//! ```rust,no_run
+//! use std::time::Duration;
+//! use backon::Sleeper;
+//! use monoio::time::sleep;
+//! use monoio::time::Sleep;
 //!
-//! - `tokio-sleep`: Utilizes [`TokioSleeper`] within a Tokio context in non-wasm32 environments.
-//! - `gloo-timers-sleep`: Utilizes [`GlooTimersSleep`] to pause in wasm32 environments.
+//! /// Sleeper implemented using `monoio::time::sleep()`.
+//! struct MonoioSleeper;
 //!
-//! Users CAN provide a custom implementation if they prefer not to use the default options.
+//! impl Sleeper for MonoioSleeper {
+//!     type Sleep = Sleep;
 //!
-//! If neither feature is enabled nor a custom implementation is provided, BackON will fallback to an empty sleeper. This will cause a panic in the `debug` profile and do nothing in the `release` profile.
+//!     fn sleep(&self, dur: Duration) -> Self::Sleep {
+//!         sleep(dur)
+//!     }
+//! }
+//! ```
+//! 
+//! ## The empty `Sleeper`
+//!
+//! If neither feature is enabled nor a custom implementation is provided, BackON will fallback to the empty sleeper. This will cause a panic in the `debug` profile and do nothing in the `release` profile.
 //!
 //! # Retry
 //!
