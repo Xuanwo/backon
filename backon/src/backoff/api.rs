@@ -1,5 +1,12 @@
 use core::time::Duration;
 
+/// Backoff is an [`Iterator`] that returns [`Duration`].
+///
+/// - `Some(Duration)` indicates the caller should `sleep(Duration)` and retry the request.
+/// - `None` indicates the limits have been reached, and the caller should return the current error instead.
+pub trait Backoff: Iterator<Item = Duration> + Send + Sync + Unpin {}
+impl<T> Backoff for T where T: Iterator<Item = Duration> + Send + Sync + Unpin {}
+
 /// BackoffBuilder is utilized to construct a new backoff.
 pub trait BackoffBuilder: Send + Sync + Unpin {
     /// The associated backoff returned by this builder.
@@ -9,9 +16,24 @@ pub trait BackoffBuilder: Send + Sync + Unpin {
     fn build(self) -> Self::Backoff;
 }
 
-/// Backoff is an [`Iterator`] that returns [`Duration`].
-///
-/// - `Some(Duration)` indicates the caller should `sleep(Duration)` and retry the request.
-/// - `None` indicates the limits have been reached, and the caller should return the current error instead.
-pub trait Backoff: Iterator<Item = Duration> + Send + Sync + Unpin {}
-impl<T> Backoff for T where T: Iterator<Item = Duration> + Send + Sync + Unpin {}
+impl<B: Backoff> BackoffBuilder for B {
+    type Backoff = B;
+
+    fn build(self) -> Self::Backoff {
+        self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_fn_builder(b: impl BackoffBuilder) {
+        let _ = b.build();
+    }
+
+    #[test]
+    fn test_backoff_builder() {
+        test_fn_builder([Duration::from_secs(1)].into_iter())
+    }
+}
