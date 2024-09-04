@@ -94,6 +94,8 @@
 //!     let content = fetch
 //!         // Retry with exponential backoff
 //!         .retry(ExponentialBuilder::default())
+//!         // Sleep implementation, default to std::thread::sleep if `std-blocking-sleep` has been enabled.
+//!         .sleep(std::thread::sleep)
 //!         // When to retry
 //!         .when(|e| e.to_string() == "EOF")
 //!         // Notify when retrying
