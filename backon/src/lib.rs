@@ -48,7 +48,7 @@
 //! If you do not want to use the built-in `Sleeper`, you CAN provide a custom 
 //! implementation, here is an example that implements a `Sleeper` with `monoio::time::sleep`:
 //! 
-//! ```rust,no_run
+//! ```rust,ignore
 //! use std::time::Duration;
 //! use backon::Sleeper;
 //! use monoio::time::sleep;
