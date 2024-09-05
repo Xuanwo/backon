@@ -31,44 +31,53 @@
 //!
 //! # Sleep
 //!
-//! Retry in BackON requires an implementation for sleeping. BackON will accept a [`Sleeper`] to pause for a specified duration.
+//! Retry in BackON requires an implementation for sleeping, such an implementation
+//! is called a Sleeper, it will implement [`Sleeper`] or [`BlockingSleeper`] depending
+//! on if it is going to be used in an asynchronous context.
 //!
-//! ## Default `Sleeper`
+//! ## Default Sleeper
 //!
-//! Currently, BackON has 2 built-in `Sleeper` implementations for different environments,
-//! they are gated under their own features, which are enabled by default:
+//! Currently, BackON has 3 built-in `Sleeper` implementations for different
+//! environments, they are gated under their own features, which are enabled
+//! by default:
 //!
-//! |      `Sleeper`      | feature          | Environment |
-//! |---------------------|------------------|-------------|
-//! | [`TokioSleeper`]    | tokio-sleep      | non-wasm32  |
-//! | [`GlooTimersSleep`] | gloo-timers-sleep|   wasm32    |
+//! |      `Sleeper`      | feature            | Environment |  Asynchronous |
+//! |---------------------|--------------------|-------------|---------------|
+//! | [`TokioSleeper`]    | tokio-sleep        | non-wasm32  |  Yes          |
+//! | [`GlooTimersSleep`] | gloo-timers-sleep  |   wasm32    |  Yes          |
+//! | [`StdSleeper`]      | std-blocking-sleep |    all      |  No           |
 //!
-//! ## Custom `Sleeper`
+//! ## Custom Sleeper
 //!
-//! If you do not want to use the built-in `Sleeper`, you CAN provide a custom
-//! implementation, here is an example that implements a `Sleeper` with `monoio::time::sleep`:
+//! If you do not want to use the built-in Sleeper, you CAN provide a custom
+//! implementation, let's implement an asynchronous dummy Sleeper that does
+//! not sleep at all. You will find it pretty similar when you implement a
+//! blocking one.
 //!
-//! ```rust,ignore
+//! ```
 //! use std::time::Duration;
 //! use backon::Sleeper;
-//! use monoio::time::sleep;
-//! use monoio::time::Sleep;
 //!
-//! /// Sleeper implemented using `monoio::time::sleep()`.
-//! struct MonoioSleeper;
+//! /// A dummy `Sleeper` impl that prints then becomes ready!
+//! struct DummySleeper;
 //!
-//! impl Sleeper for MonoioSleeper {
-//!     type Sleep = Sleep;
+//! impl Sleeper for DummySleeper {
+//!     type Sleep = std::future::Ready<()>;
 //!
 //!     fn sleep(&self, dur: Duration) -> Self::Sleep {
-//!         sleep(dur)
+//!         println!("Hello from DummySleeper!");
+//!         std::future::ready(())
 //!     }
 //! }
 //! ```
 //!
-//! ## The empty `Sleeper`
+//! ## The empty Sleeper
 //!
-//! If neither feature is enabled nor a custom implementation is provided, BackON will fallback to the empty sleeper. This will cause a panic in the `debug` profile and do nothing in the `release` profile.
+//! If neither feature is enabled nor a custom implementation is provided, BackON
+//! will fallback to the empty sleeper, in which case, a compile-time error that
+//! `PleaseEnableAFeatureOrProvideACustomSleeper needs to implement Sleeper or
+//! BlockingSleeper` will be raised to remind you to choose or bring a real Sleeper
+//! implementation.
 //!
 //! # Retry
 //!
