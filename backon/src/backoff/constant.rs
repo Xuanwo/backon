@@ -84,6 +84,14 @@ impl BackoffBuilder for ConstantBuilder {
     }
 }
 
+impl BackoffBuilder for &ConstantBuilder {
+    type Backoff = ConstantBackoff;
+
+    fn build(self) -> Self::Backoff {
+        (*self).build()
+    }
+}
+
 /// ConstantBackoff offers a consistent delay with a limited number of retries.
 ///
 /// This backoff strategy is constructed by [`ConstantBuilder`].
