@@ -31,16 +31,53 @@
 //!
 //! # Sleep
 //!
-//! Retry in BackON requires an implementation for sleeping. BackON will accept a [`Sleeper`] to pause for a specified duration.
+//! Retry in BackON requires an implementation for sleeping, such an implementation
+//! is called a Sleeper, it will implement [`Sleeper`] or [`BlockingSleeper`] depending
+//! on if it is going to be used in an asynchronous context.
 //!
-//! BackON employs the following default sleep implementations:
+//! ## Default Sleeper
 //!
-//! - `tokio-sleep`: Utilizes [`TokioSleeper`] within a Tokio context in non-wasm32 environments.
-//! - `gloo-timers-sleep`: Utilizes [`GlooTimersSleep`] to pause in wasm32 environments.
+//! Currently, BackON has 3 built-in Sleeper implementations for different
+//! environments, they are gated under their own features, which are enabled
+//! by default:
 //!
-//! Users CAN provide a custom implementation if they prefer not to use the default options.
+//! |      `Sleeper`      | feature            | Environment |  Asynchronous |
+//! |---------------------|--------------------|-------------|---------------|
+//! | [`TokioSleeper`]    | tokio-sleep        | non-wasm32  |  Yes          |
+//! | [`GlooTimersSleep`] | gloo-timers-sleep  |   wasm32    |  Yes          |
+//! | [`StdSleeper`]      | std-blocking-sleep |    all      |  No           |
 //!
-//! If neither feature is enabled nor a custom implementation is provided, BackON will fallback to an empty sleeper. This will cause a panic in the `debug` profile and do nothing in the `release` profile.
+//! ## Custom Sleeper
+//!
+//! If you do not want to use the built-in Sleeper, you CAN provide a custom
+//! implementation, let's implement an asynchronous dummy Sleeper that does
+//! not sleep at all. You will find it pretty similar when you implement a
+//! blocking one.
+//!
+//! ```
+//! use std::time::Duration;
+//! use backon::Sleeper;
+//!
+//! /// A dummy `Sleeper` impl that prints then becomes ready!
+//! struct DummySleeper;
+//!
+//! impl Sleeper for DummySleeper {
+//!     type Sleep = std::future::Ready<()>;
+//!
+//!     fn sleep(&self, dur: Duration) -> Self::Sleep {
+//!         println!("Hello from DummySleeper!");
+//!         std::future::ready(())
+//!     }
+//! }
+//! ```
+//!
+//! ## The empty Sleeper
+//!
+//! If neither feature is enabled nor a custom implementation is provided, BackON
+//! will fallback to the empty sleeper, in which case, a compile-time error that
+//! `PleaseEnableAFeatureOrProvideACustomSleeper needs to implement Sleeper or
+//! BlockingSleeper` will be raised to remind you to choose or bring a real Sleeper
+//! implementation.
 //!
 //! # Retry
 //!
