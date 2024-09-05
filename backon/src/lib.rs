@@ -37,7 +37,7 @@
 //!
 //! ## Default Sleeper
 //!
-//! Currently, BackON has 3 built-in `Sleeper` implementations for different
+//! Currently, BackON has 3 built-in Sleeper implementations for different
 //! environments, they are gated under their own features, which are enabled
 //! by default:
 //!
