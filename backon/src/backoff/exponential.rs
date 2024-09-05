@@ -117,6 +117,14 @@ impl BackoffBuilder for ExponentialBuilder {
     }
 }
 
+impl BackoffBuilder for &ExponentialBuilder {
+    type Backoff = ExponentialBackoff;
+
+    fn build(self) -> Self::Backoff {
+        (*self).build()
+    }
+}
+
 /// ExponentialBackoff provides a delay with exponential retries.
 ///
 /// This backoff strategy is constructed by [`ExponentialBuilder`].

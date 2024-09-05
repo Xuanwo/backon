@@ -27,6 +27,7 @@ impl<B: Backoff> BackoffBuilder for B {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{ConstantBuilder, ExponentialBuilder, FibonacciBuilder};
 
     fn test_fn_builder(b: impl BackoffBuilder) {
         let _ = b.build();
@@ -34,6 +35,14 @@ mod tests {
 
     #[test]
     fn test_backoff_builder() {
-        test_fn_builder([Duration::from_secs(1)].into_iter())
+        test_fn_builder([Duration::from_secs(1)].into_iter());
+
+        // Just for test if user can keep using &XxxBuilder.
+        #[allow(clippy::needless_borrows_for_generic_args)]
+        {
+            test_fn_builder(&ConstantBuilder::default());
+            test_fn_builder(&FibonacciBuilder::default());
+            test_fn_builder(&ExponentialBuilder::default());
+        }
     }
 }

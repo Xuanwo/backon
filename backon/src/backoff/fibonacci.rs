@@ -101,6 +101,14 @@ impl BackoffBuilder for FibonacciBuilder {
     }
 }
 
+impl BackoffBuilder for &FibonacciBuilder {
+    type Backoff = FibonacciBackoff;
+
+    fn build(self) -> Self::Backoff {
+        (*self).build()
+    }
+}
+
 /// FibonacciBackoff offers a delay with Fibonacci-based retries.
 ///
 /// This backoff strategy is constructed by [`FibonacciBuilder`].
