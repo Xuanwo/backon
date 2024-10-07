@@ -182,10 +182,7 @@ impl Iterator for ExponentialBackoff {
 
 #[inline]
 pub(crate) fn saturating_mul(d: Duration, rhs: f32) -> Duration {
-    match Duration::try_from_secs_f32(rhs * d.as_secs_f32()) {
-        Ok(v) => v,
-        Err(_) => Duration::MAX,
-    }
+    Duration::try_from_secs_f32(rhs * d.as_secs_f32()).unwrap_or(Duration::MAX)
 }
 
 #[cfg(test)]
