@@ -84,6 +84,7 @@ impl Sleeper for TokioSleeper {
 ///
 /// See the [`futures-timer` crate](https://docs.rs/futures-timer/latest/) for details.
 #[cfg(feature = "futures-timer-sleep")]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FuturesTimerSleeper;
 
 #[cfg(feature = "futures-timer-sleep")]
