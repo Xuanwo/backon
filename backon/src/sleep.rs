@@ -46,7 +46,10 @@ pub type DefaultSleeper = TokioSleeper;
 /// The default implementation of `Sleeper` while feature `futures-timer-sleep` enabled.
 ///
 /// It uses `futures_timer::Delay`.
-#[cfg(any(target_arch = "wasm32", all(not(feature = "tokio-sleep"), feature = "futures-timer-sleep")))]
+#[cfg(any(
+    target_arch = "wasm32",
+    all(not(feature = "tokio-sleep"), feature = "futures-timer-sleep")
+))]
 pub type DefaultSleeper = FuturesTimerSleeper;
 /// A placeholder type that does not implement [`Sleeper`] and will therefore fail to compile if used as one.
 ///
