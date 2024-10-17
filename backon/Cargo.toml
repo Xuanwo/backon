@@ -34,7 +34,7 @@ tokio = { version = "1", optional = true }
 futures-timer = { version = "3.0.3", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-futures-timer = { version = "3.0.3", features = ["gloo-timers"], optional = true }
+futures-timer = { version = "3.0.3", features = ["gloo-timers", "wasm-bindgen"], optional = true }
 
 [dev-dependencies]
 anyhow = "1"
