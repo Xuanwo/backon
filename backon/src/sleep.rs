@@ -36,19 +36,18 @@ impl<F: Fn(Duration) -> Fut + 'static, Fut: Future<Output = ()>> Sleeper for F {
 /// The default implementation of `Sleeper` when no features are enabled.
 ///
 /// It will fail to compile if a containing [`Retry`][crate::Retry] is `.await`ed without calling [`Retry::sleep`][crate::Retry::sleep] to provide a valid sleeper.
-#[cfg(all(not(feature = "tokio-sleep"), not(feature = "gloo-timers-sleep")))]
+#[cfg(all(not(feature = "tokio-sleep"), not(feature = "futures-timer-sleep")))]
 pub type DefaultSleeper = PleaseEnableAFeatureOrProvideACustomSleeper;
 /// The default implementation of `Sleeper` while feature `tokio-sleep` enabled.
 ///
 /// it uses `tokio::time::sleep`.
 #[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 pub type DefaultSleeper = TokioSleeper;
-/// The default implementation of `Sleeper` while feature `gloo-timers-sleep` enabled.
+/// The default implementation of `Sleeper` while feature `futures-timer-sleep` enabled.
 ///
-/// It uses `gloo_timers::sleep::sleep`.
-#[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
-pub type DefaultSleeper = GlooTimersSleep;
-
+/// It uses `futures_timer::Delay`.
+#[cfg(any(target_arch = "wasm32", all(not(feature = "tokio-sleep"), feature = "futures-timer-sleep")))]
+pub type DefaultSleeper = FuturesTimerSleeper;
 /// A placeholder type that does not implement [`Sleeper`] and will therefore fail to compile if used as one.
 ///
 /// Users should enable a feature of this crate that provides a valid [`Sleeper`] implementation when this type appears in compilation errors. Alternatively, a custom [`Sleeper`] implementation should be provided where necessary, such as in [`crate::Retry::sleeper`].
@@ -78,16 +77,17 @@ impl Sleeper for TokioSleeper {
     }
 }
 
-/// The default implementation of `Sleeper` utilizes `gloo_timers::future::sleep`.
-#[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GlooTimersSleep;
+/// Sleeper implementation using `futures-timer` crate.
+///
+/// See the [`futures-timer` crate](https://docs.rs/futures-timer/latest/) for details.
+#[cfg(feature = "futures-timer-sleep")]
+pub struct FuturesTimerSleeper;
 
-#[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
-impl Sleeper for GlooTimersSleep {
-    type Sleep = gloo_timers::future::TimeoutFuture;
+#[cfg(feature = "futures-timer-sleep")]
+impl Sleeper for FuturesTimerSleeper {
+    type Sleep = futures_timer::Delay;
 
     fn sleep(&self, dur: Duration) -> Self::Sleep {
-        gloo_timers::future::sleep(dur)
+        futures_timer::Delay::new(dur)
     }
 }
