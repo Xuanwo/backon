@@ -13,6 +13,7 @@ Make **retry** like a built-in feature provided by Rust.
 - **Flexible**: Supports both blocking and async functions.
 - **Powerful**: Allows control over retry behavior such as [`when`](https://docs.rs/backon/latest/backon/struct.Retry.html#method.when) and [`notify`](https://docs.rs/backon/latest/backon/struct.Retry.html#method.notify).
 - **Customizable**: Supports custom retry strategies like [exponential](https://docs.rs/backon/latest/backon/struct.ExponentialBuilder.html), [constant](https://docs.rs/backon/latest/backon/struct.ConstantBuilder.html), etc.
+- **Adaptable**: Works on all platforms supported by Rust, including both `wasm` and `no-std`.
 
 ---
 
