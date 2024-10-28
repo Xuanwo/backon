@@ -324,7 +324,10 @@ mod default_sleeper_tests {
     use alloc::string::ToString;
     use alloc::vec;
     use alloc::vec::Vec;
+    use core::str::FromStr;
     use core::time::Duration;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
     use tokio::sync::Mutex;
 
     #[cfg(target_arch = "wasm32")]
@@ -334,7 +337,7 @@ mod default_sleeper_tests {
     use tokio::test;
 
     use super::*;
-    use crate::ExponentialBuilder;
+    use crate::{ConstantBuilder, ExponentialBuilder};
 
     async fn always_error() -> anyhow::Result<()> {
         Err(anyhow::anyhow!("test_query meets error"))
@@ -428,6 +431,49 @@ mod default_sleeper_tests {
         assert_eq!(calls_notify.len(), 3);
         Ok(())
     }
+
+    async fn send_my_request(req: MyRequest, seq: &mut usize) -> anyhow::Result<()> {
+        *seq += 1;
+        Ok(())
+    }
+
+    struct MyRequest {
+        req: reqwest::Request,
+    }
+
+    impl Clone for MyRequest {
+        fn clone(&self) -> Self {
+            Self {
+                req: reqwest::Request::new(
+                    reqwest::Method::GET,
+                    reqwest::Url::from_str("https://www.rust-lang.org").unwrap(),
+                ),
+            }
+        }
+    }
+
+    impl MyRequest {
+        fn should_retry(&self, err: &anyhow::Error) -> bool {
+            err.to_string() == "retryable"
+        }
+    }
+
+    // #[test]
+    // async fn test_retryable_request() -> anyhow::Result<()> {
+    //     let req = MyRequest {
+    //         req: reqwest::Request::new(
+    //             reqwest::Method::GET,
+    //             reqwest::Url::from_str("https://www.rust-lang.org").unwrap(),
+    //         ),
+    //     };
+    //     let mut seq = 1;
+    //     let retry_fn = || async { send_my_request(req.clone(), &mut seq).await };
+    //
+    //     retry_fn
+    //         .retry(ConstantBuilder::default())
+    //         .when(|e| req.should_retry(e))
+    //         .await
+    // }
 }
 
 #[cfg(test)]

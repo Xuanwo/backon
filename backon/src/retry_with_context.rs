@@ -366,6 +366,7 @@ where
 mod tests {
     use alloc::string::ToString;
     use anyhow::{anyhow, Result};
+    use core::str::FromStr;
     use core::time::Duration;
     use tokio::sync::Mutex;
 
@@ -376,7 +377,7 @@ mod tests {
     use tokio::test;
 
     use super::*;
-    use crate::ExponentialBuilder;
+    use crate::{ConstantBuilder, ExponentialBuilder};
 
     struct Test;
 
@@ -415,5 +416,58 @@ mod tests {
         // only once.
         assert_eq!(*error_times.lock().await, 1);
         Ok(())
+    }
+
+    async fn send_my_request(req: MyRequest, seq: &mut usize) -> Result<()> {
+        *seq += 1;
+        Ok(())
+    }
+
+    struct MyRequest {
+        req: reqwest::Request,
+    }
+
+    impl Clone for MyRequest {
+        fn clone(&self) -> Self {
+            Self {
+                req: reqwest::Request::new(
+                    reqwest::Method::GET,
+                    reqwest::Url::from_str("https://www.rust-lang.org").unwrap(),
+                ),
+            }
+        }
+    }
+
+    impl MyRequest {
+        fn should_retry(&self, err: &anyhow::Error) -> bool {
+            err.to_string() == "retryable"
+        }
+    }
+
+    #[test]
+    async fn test_retryable_request() -> Result<()> {
+        let req = MyRequest {
+            req: reqwest::Request::new(
+                reqwest::Method::GET,
+                reqwest::Url::from_str("https://www.rust-lang.org").unwrap(),
+            ),
+        };
+        let retry_fn = |mut seq: usize| {
+            let req = req.clone();
+
+            async move {
+                {
+                    let x = send_my_request(req, &mut seq).await;
+                    (seq, x)
+                }
+            }
+        };
+
+        let (seq, x) = retry_fn
+            .retry(ConstantBuilder::default())
+            .context(1)
+            .when(|e| req.should_retry(e))
+            .await;
+        x
     }
 }
