@@ -173,6 +173,8 @@ mod sleep;
 pub use sleep::DefaultSleeper;
 #[cfg(all(target_arch = "wasm32", feature = "futures-timer-sleep"))]
 pub use sleep::FuturesTimerSleeper;
+#[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
+pub use sleep::GlooTimersSleep;
 pub use sleep::Sleeper;
 #[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 pub use sleep::TokioSleeper;

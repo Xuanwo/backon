@@ -95,3 +95,9 @@ impl Sleeper for FuturesTimerSleeper {
         futures_timer::Delay::new(dur)
     }
 }
+
+/// Legacy `gloo-timers` based sleeper, which is now just an alias for [`FuturesTimerSleeper`].
+///
+/// Note that the `gloo-timers-sleep` feature automatically enables `futures-timer-sleeper`.
+#[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
+pub type GlooTimersSleep = FuturesTimerSleeper;
