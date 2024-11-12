@@ -219,10 +219,14 @@ where
     ///     Ok(())
     /// }
     /// ```
-    pub fn when<RN: FnMut(&E) -> bool>(
+    pub fn when<RN, DE>(
         self,
         retryable: RN,
-    ) -> RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SF, RN, NF> {
+    ) -> RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SF, RN, NF>
+    where
+        RN: FnMut(&E) -> DE,
+        DE: Into<bool>,
+    {
         RetryWithContext {
             backoff: self.backoff,
             retryable,
@@ -290,14 +294,15 @@ enum State<T, E, Ctx, Fut: Future<Output = (Ctx, Result<T, E>)>, SleepFut: Futur
     Sleeping((Option<Ctx>, SleepFut)),
 }
 
-impl<B, T, E, Ctx, Fut, FutureFn, SF, RF, NF> Future
+impl<B, T, E, Ctx, Fut, FutureFn, SF, RF, NF, DE> Future
     for RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SF, RF, NF>
 where
     B: Backoff,
     Fut: Future<Output = (Ctx, Result<T, E>)>,
     FutureFn: FnMut(Ctx) -> Fut,
     SF: Sleeper,
-    RF: FnMut(&E) -> bool,
+    DE: Into<bool>,
+    RF: FnMut(&E) -> DE,
     NF: FnMut(&E, Duration),
 {
     type Output = (Ctx, Result<T, E>);
@@ -329,7 +334,9 @@ where
                         Ok(v) => return Poll::Ready((ctx, Ok(v))),
                         Err(err) => {
                             // If input error is not retryable, return error directly.
-                            if !(this.retryable)(&err) {
+                            let retry: bool = (this.retryable)(&err).into();
+
+                            if !retry {
                                 return Poll::Ready((ctx, Err(err)));
                             }
                             match this.backoff.next() {

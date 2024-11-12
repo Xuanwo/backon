@@ -100,6 +100,24 @@ where
     }
 }
 
+/// A decision returned from the `Retry::when` or `RetryableWithContext::when` methods
+/// to instuct the system to keep retrying or stop.
+///
+/// You can implement your own type that evaluates to a bool for use with both the
+/// the `Retry::when` or `RetryableWithContext::when` methods.
+pub enum Decide {
+    /// Stop retrying and propogate the Error up.
+    Stop,
+    /// Retry the payload function.
+    Retry,
+}
+
+impl From<Decide> for bool {
+    fn from(value: Decide) -> Self {
+        matches!(value, Decide::Retry)
+    }
+}
+
 impl<B, T, E, Fut, FutureFn, SF, RF, NF> Retry<B, T, E, Fut, FutureFn, SF, RF, NF>
 where
     B: Backoff,
@@ -179,10 +197,11 @@ where
     ///     Ok(())
     /// }
     /// ```
-    pub fn when<RN: FnMut(&E) -> bool>(
-        self,
-        retryable: RN,
-    ) -> Retry<B, T, E, Fut, FutureFn, SF, RN, NF> {
+    pub fn when<RN, DE>(self, retryable: RN) -> Retry<B, T, E, Fut, FutureFn, SF, RN, NF>
+    where
+        RN: FnMut(&E) -> DE,
+        DE: Into<bool>,
+    {
         Retry {
             backoff: self.backoff,
             retryable,
@@ -252,13 +271,14 @@ enum State<T, E, Fut: Future<Output = Result<T, E>>, SleepFut: Future<Output = (
     Sleeping(SleepFut),
 }
 
-impl<B, T, E, Fut, FutureFn, SF, RF, NF> Future for Retry<B, T, E, Fut, FutureFn, SF, RF, NF>
+impl<B, T, E, Fut, FutureFn, SF, RF, NF, DE> Future for Retry<B, T, E, Fut, FutureFn, SF, RF, NF>
 where
     B: Backoff,
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
     SF: Sleeper,
-    RF: FnMut(&E) -> bool,
+    DE: Into<bool>,
+    RF: FnMut(&E) -> DE,
     NF: FnMut(&E, Duration),
 {
     type Output = Result<T, E>;
@@ -288,7 +308,8 @@ where
                         Ok(v) => return Poll::Ready(Ok(v)),
                         Err(err) => {
                             // If input error is not retryable, return error directly.
-                            if !(this.retryable)(&err) {
+                            let retry = (this.retryable)(&err).into();
+                            if !retry {
                                 return Poll::Ready(Err(err));
                             }
                             match this.backoff.next() {
@@ -377,7 +398,57 @@ mod default_sleeper_tests {
     }
 
     #[test]
+    async fn test_retry_with_decision_stop() -> anyhow::Result<()> {
+        let error_times = Mutex::new(0);
+
+        let f = || async {
+            let mut x = error_times.lock().await;
+            *x += 1;
+            Err::<(), anyhow::Error>(anyhow::anyhow!("not retryable"))
+        };
+
+        let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_millis(1));
+        let result = f
+            .retry(backoff)
+            // Only retry If error message is `retryable`
+            .when(|_e| Decide::Stop)
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!("not retryable", result.unwrap_err().to_string());
+        // `f` always returns error "not retryable", so it should be executed
+        // only once.
+        assert_eq!(*error_times.lock().await, 1);
+        Ok(())
+    }
+
+    #[test]
     async fn test_retry_with_retryable_error() -> anyhow::Result<()> {
+        let error_times = Mutex::new(0);
+
+        let f = || async {
+            let mut x = error_times.lock().await;
+            *x += 1;
+            Err::<(), anyhow::Error>(anyhow::anyhow!("retryable"))
+        };
+
+        let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_millis(1));
+        let result = f
+            .retry(backoff)
+            // Only retry If error message is `retryable`
+            .when(|_e| Decide::Retry)
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!("retryable", result.unwrap_err().to_string());
+        // `f` always returns error "retryable", so it should be executed
+        // 4 times (retry 3 times).
+        assert_eq!(*error_times.lock().await, 4);
+        Ok(())
+    }
+
+    #[test]
+    async fn test_retry_with_decision_retry() -> anyhow::Result<()> {
         let error_times = Mutex::new(0);
 
         let f = || async {
