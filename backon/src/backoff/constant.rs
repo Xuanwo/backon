@@ -149,32 +149,32 @@ mod tests {
 
     #[test]
     fn test_constant_default() {
-        let mut exp = ConstantBuilder::default().build();
+        let mut it = ConstantBuilder::default().build();
 
-        assert_eq!(Some(Duration::from_secs(1)), exp.next());
-        assert_eq!(Some(Duration::from_secs(1)), exp.next());
-        assert_eq!(Some(Duration::from_secs(1)), exp.next());
-        assert_eq!(None, exp.next());
+        assert_eq!(Some(Duration::from_secs(1)), it.next());
+        assert_eq!(Some(Duration::from_secs(1)), it.next());
+        assert_eq!(Some(Duration::from_secs(1)), it.next());
+        assert_eq!(None, it.next());
     }
 
     #[test]
     fn test_constant_with_delay() {
-        let mut exp = ConstantBuilder::default()
+        let mut it = ConstantBuilder::default()
             .with_delay(Duration::from_secs(2))
             .build();
 
-        assert_eq!(Some(Duration::from_secs(2)), exp.next());
-        assert_eq!(Some(Duration::from_secs(2)), exp.next());
-        assert_eq!(Some(Duration::from_secs(2)), exp.next());
-        assert_eq!(None, exp.next());
+        assert_eq!(Some(Duration::from_secs(2)), it.next());
+        assert_eq!(Some(Duration::from_secs(2)), it.next());
+        assert_eq!(Some(Duration::from_secs(2)), it.next());
+        assert_eq!(None, it.next());
     }
 
     #[test]
     fn test_constant_with_times() {
-        let mut exp = ConstantBuilder::default().with_max_times(1).build();
+        let mut it = ConstantBuilder::default().with_max_times(1).build();
 
-        assert_eq!(Some(Duration::from_secs(1)), exp.next());
-        assert_eq!(None, exp.next());
+        assert_eq!(Some(Duration::from_secs(1)), it.next());
+        assert_eq!(None, it.next());
     }
 
     #[test]
