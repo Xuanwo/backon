@@ -91,11 +91,31 @@ impl ExponentialBuilder {
         self
     }
 
+    /// Set no maximum delay for the backoff.
+    ///
+    /// The delay will keep increasing.
+    ///
+    /// _The delay will saturate at `Duration::MAX` which is an **unrealistic** delay._
+    pub fn without_max_delay(mut self) -> Self {
+        self.max_delay = None;
+        self
+    }
+
     /// Set the maximum number of attempts for the current backoff.
     ///
     /// The backoff will stop if the maximum number of attempts is reached.
     pub fn with_max_times(mut self, max_times: usize) -> Self {
         self.max_times = Some(max_times);
+        self
+    }
+
+    /// Set no maximum number of attempts for the current backoff.
+    ///
+    /// The backoff will not stop by itself.
+    ///
+    /// _The backoff could stop reaching `usize::MAX` attempts but this is **unrealistic**._
+    pub fn without_max_times(mut self) -> Self {
+        self.max_times = None;
         self
     }
 }
