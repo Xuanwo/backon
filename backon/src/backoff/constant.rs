@@ -68,6 +68,16 @@ impl ConstantBuilder {
         self.jitter = true;
         self
     }
+
+    /// Set no max times for the backoff.
+    ///
+    /// The backoff will not stop by itself.
+    ///
+    /// _The backoff could stop reaching `usize::MAX` attempts but this is **unrealistic**._
+    pub fn without_max_times(mut self) -> Self {
+        self.max_times = None;
+        self
+    }
 }
 
 impl BackoffBuilder for ConstantBuilder {
@@ -174,5 +184,14 @@ mod tests {
         let dur = it.next().unwrap();
         fastrand::seed(7);
         assert!(dur > Duration::from_secs(1));
+    }
+
+    #[test]
+    fn test_constant_without_max_times() {
+        let mut it = ConstantBuilder::default().without_max_times().build();
+
+        for _ in 0..10_000 {
+            assert_eq!(Some(Duration::from_secs(1)), it.next());
+        }
     }
 }
