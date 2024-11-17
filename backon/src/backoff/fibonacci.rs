@@ -256,6 +256,27 @@ mod tests {
     }
 
     #[test]
+    fn test_fibonacci_no_max_delay() {
+        let mut fib = FibonacciBuilder::default()
+            .with_max_times(4)
+            .with_min_delay(Duration::from_secs(10_000_000_000_000_000_000))
+            .without_max_delay()
+            .build();
+
+        assert_eq!(
+            Some(Duration::from_secs(10_000_000_000_000_000_000)),
+            fib.next()
+        );
+        assert_eq!(
+            Some(Duration::from_secs(10_000_000_000_000_000_000)),
+            fib.next()
+        );
+        assert_eq!(Some(Duration::MAX), fib.next());
+        assert_eq!(Some(Duration::MAX), fib.next());
+        assert_eq!(None, fib.next());
+    }
+
+    #[test]
     fn test_fibonacci_max_times() {
         let mut fib = FibonacciBuilder::default().with_max_times(6).build();
 
@@ -266,5 +287,19 @@ mod tests {
         assert_eq!(Some(Duration::from_secs(5)), fib.next());
         assert_eq!(Some(Duration::from_secs(8)), fib.next());
         assert_eq!(None, fib.next());
+    }
+
+    #[test]
+    fn test_fibonacci_no_max_times() {
+        let mut fib = FibonacciBuilder::default()
+            .with_min_delay(Duration::from_secs(0))
+            .without_max_times()
+            .build();
+
+        // to fully test we would need to call this `usize::MAX`
+        // which seems unreasonable for a test as it would take too long...
+        for _ in 0..10_000 {
+            assert_eq!(Some(Duration::from_secs(0)), fib.next());
+        }
     }
 }
