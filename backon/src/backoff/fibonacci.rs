@@ -173,7 +173,7 @@ impl Iterator for FibonacciBackoff {
                 // If current delay larger than max delay, we should stop increment anymore.
                 if next < self.max_delay.unwrap_or(Duration::MAX) {
                     if let Some(prev) = self.previous_delay {
-                        next += prev;
+                        next = next.saturating_add(prev);
                         self.current_delay = Some(next);
                     }
                     self.previous_delay = Some(cur);
