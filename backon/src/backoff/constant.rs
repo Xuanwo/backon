@@ -55,7 +55,7 @@ impl ConstantBuilder {
         self
     }
 
-    /// Set the maximum duration for the backoff.
+    /// Set the maximum number of attempts to be made.
     pub fn with_max_times(mut self, max_times: usize) -> Self {
         self.max_times = Some(max_times);
         self
