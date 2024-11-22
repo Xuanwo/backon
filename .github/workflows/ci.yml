@@ -78,5 +78,4 @@ jobs:
       - run: wasm-pack test --node --all-features -- --skip blocking
         working-directory: backon
         env:
-          RUST_LOG: DEBUG
           RUST_BACKTRACE: full
