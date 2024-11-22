@@ -70,9 +70,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # We can remove this once https://github.com/rustwasm/wasm-bindgen/issues/4211 fixed.
-      - name: Install and pin Rust 1.81
-        run: rustup toolchain install 1.81 && rustup default 1.81
+      - uses: actions/setup-node@v4
+        with:
+          node-version: latest
       - name: Install
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run: wasm-pack test --node --all-features -- --skip blocking
