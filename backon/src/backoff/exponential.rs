@@ -91,11 +91,31 @@ impl ExponentialBuilder {
         self
     }
 
+    /// Set no maximum delay for the backoff.
+    ///
+    /// The delay will keep increasing.
+    ///
+    /// _The delay will saturate at `Duration::MAX` which is an **unrealistic** delay._
+    pub fn without_max_delay(mut self) -> Self {
+        self.max_delay = None;
+        self
+    }
+
     /// Set the maximum number of attempts for the current backoff.
     ///
     /// The backoff will stop if the maximum number of attempts is reached.
     pub fn with_max_times(mut self, max_times: usize) -> Self {
         self.max_times = Some(max_times);
+        self
+    }
+
+    /// Set no maximum number of attempts for the current backoff.
+    ///
+    /// The backoff will not stop by itself.
+    ///
+    /// _The backoff could stop reaching `usize::MAX` attempts but this is **unrealistic**._
+    pub fn without_max_times(mut self) -> Self {
+        self.max_times = None;
         self
     }
 }
@@ -247,6 +267,21 @@ mod tests {
     }
 
     #[test]
+    fn test_exponential_no_max_times_with_default() {
+        let mut exp = ExponentialBuilder::default()
+            .with_min_delay(Duration::from_secs(1))
+            .with_factor(1_f32)
+            .without_max_times()
+            .build();
+
+        // to fully test we would need to call this `usize::MAX`
+        // which seems unreasonable for a test as it would take too long...
+        for _ in 0..10_000 {
+            assert_eq!(Some(Duration::from_secs(1)), exp.next());
+        }
+    }
+
+    #[test]
     fn test_exponential_max_delay_with_default() {
         let mut exp = ExponentialBuilder::default()
             .with_max_delay(Duration::from_secs(2))
@@ -255,6 +290,22 @@ mod tests {
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
         assert_eq!(Some(Duration::from_secs(2)), exp.next());
         assert_eq!(Some(Duration::from_secs(2)), exp.next());
+        assert_eq!(None, exp.next());
+    }
+
+    #[test]
+    fn test_exponential_no_max_delay_with_default() {
+        let mut exp = ExponentialBuilder::default()
+            .with_min_delay(Duration::from_secs(1))
+            .with_factor(10_000_000_000_f32)
+            .without_max_delay()
+            .with_max_times(4)
+            .build();
+
+        assert_eq!(Some(Duration::from_secs(1)), exp.next());
+        assert_eq!(Some(Duration::from_secs(10_000_000_000)), exp.next());
+        assert_eq!(Some(Duration::MAX), exp.next());
+        assert_eq!(Some(Duration::MAX), exp.next());
         assert_eq!(None, exp.next());
     }
 
