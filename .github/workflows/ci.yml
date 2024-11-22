@@ -70,10 +70,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: latest
       - name: Install
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run: wasm-pack test --node --all-features -- --skip blocking
         working-directory: backon
         env:
-          RUST_LOG: DEBUG
           RUST_BACKTRACE: full

@@ -341,18 +341,17 @@ mod default_sleeper_tests {
     }
 
     #[test]
-    async fn test_retry() -> anyhow::Result<()> {
+    async fn test_retry() {
         let result = always_error
             .retry(ExponentialBuilder::default().with_min_delay(Duration::from_millis(1)))
             .await;
 
         assert!(result.is_err());
         assert_eq!("test_query meets error", result.unwrap_err().to_string());
-        Ok(())
     }
 
     #[test]
-    async fn test_retry_with_not_retryable_error() -> anyhow::Result<()> {
+    async fn test_retry_with_not_retryable_error() {
         let error_times = Mutex::new(0);
 
         let f = || async {
@@ -373,11 +372,10 @@ mod default_sleeper_tests {
         // `f` always returns error "not retryable", so it should be executed
         // only once.
         assert_eq!(*error_times.lock().await, 1);
-        Ok(())
     }
 
     #[test]
-    async fn test_retry_with_retryable_error() -> anyhow::Result<()> {
+    async fn test_retry_with_retryable_error() {
         let error_times = Mutex::new(0);
 
         let f = || async {
@@ -398,11 +396,10 @@ mod default_sleeper_tests {
         // `f` always returns error "retryable", so it should be executed
         // 4 times (retry 3 times).
         assert_eq!(*error_times.lock().await, 4);
-        Ok(())
     }
 
     #[test]
-    async fn test_fn_mut_when_and_notify() -> anyhow::Result<()> {
+    async fn test_fn_mut_when_and_notify() {
         let mut calls_retryable: Vec<()> = vec![];
         let mut calls_notify: Vec<()> = vec![];
 
@@ -426,7 +423,6 @@ mod default_sleeper_tests {
         // 4 times (retry 3 times).
         assert_eq!(calls_retryable.len(), 4);
         assert_eq!(calls_notify.len(), 3);
-        Ok(())
     }
 }
 
@@ -449,7 +445,7 @@ mod custom_sleeper_tests {
     }
 
     #[test]
-    async fn test_retry_with_sleep() -> anyhow::Result<()> {
+    async fn test_retry_with_sleep() {
         let result = always_error
             .retry(ExponentialBuilder::default().with_min_delay(Duration::from_millis(1)))
             .sleep(|_| ready(()))
@@ -457,6 +453,5 @@ mod custom_sleeper_tests {
 
         assert!(result.is_err());
         assert_eq!("test_query meets error", result.unwrap_err().to_string());
-        Ok(())
     }
 }
