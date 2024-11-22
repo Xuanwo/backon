@@ -387,7 +387,7 @@ mod tests {
     }
 
     #[test]
-    async fn test_retry_with_not_retryable_error() -> Result<()> {
+    async fn test_retry_with_not_retryable_error() {
         let error_times = Mutex::new(0);
 
         let test = Test;
@@ -414,6 +414,5 @@ mod tests {
         // `f` always returns error "not retryable", so it should be executed
         // only once.
         assert_eq!(*error_times.lock().await, 1);
-        Ok(())
     }
 }
