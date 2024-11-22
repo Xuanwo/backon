@@ -41,11 +41,14 @@
 //! environments, they are gated under their own features, which are enabled
 //! by default:
 //!
-//! |      `Sleeper`      | feature            | Environment |  Asynchronous |
-//! |---------------------|--------------------|-------------|---------------|
-//! | [`TokioSleeper`]    | tokio-sleep        | non-wasm32  |  Yes          |
-//! | [`GlooTimersSleep`] | gloo-timers-sleep  |   wasm32    |  Yes          |
-//! | [`StdSleeper`]      | std-blocking-sleep |    all      |  No           |
+//! |      `Sleeper`          | feature               | Environment |  Asynchronous |
+//! |-------------------------|-----------------------|-------------|---------------|
+//! | [`TokioSleeper`]        | tokio-sleep           | non-wasm32  |  Yes          |
+//! | [`FuturesTimerSleeper`] | future-timers-sleep   |   both      |  Yes          |
+//! | [`StdSleeper`]          | std-blocking-sleep    |    all      |  No           |
+//!
+//! The `gloo-timers-sleep` feature implies the `future-timers-sleep` feature and is only
+//! kept for backwards compatibility.
 //!
 //! ## Custom Sleeper
 //!
@@ -168,6 +171,8 @@ pub use retry_with_context::RetryableWithContext;
 
 mod sleep;
 pub use sleep::DefaultSleeper;
+#[cfg(all(target_arch = "wasm32", feature = "futures-timer-sleep"))]
+pub use sleep::FuturesTimerSleeper;
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 pub use sleep::GlooTimersSleep;
 pub use sleep::Sleeper;
