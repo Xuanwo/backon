@@ -162,7 +162,7 @@ impl Iterator for FibonacciBackoff {
 
                 // If jitter is enabled, add random jitter based on min delay.
                 if self.jitter {
-                    next += self.min_delay.mul_f32(fastrand::f32());
+                    next += self.min_delay.mul_f32(super::f32());
                 }
 
                 Some(next)
@@ -181,7 +181,7 @@ impl Iterator for FibonacciBackoff {
 
                 // If jitter is enabled, add random jitter based on min delay.
                 if self.jitter {
-                    next += self.min_delay.mul_f32(fastrand::f32());
+                    next += self.min_delay.mul_f32(super::f32());
                 }
 
                 Some(next)

@@ -120,7 +120,7 @@ impl Iterator for ConstantBackoff {
 
     fn next(&mut self) -> Option<Self::Item> {
         let delay = || match self.jitter {
-            true => self.delay + self.delay.mul_f32(fastrand::f32()),
+            true => self.delay + self.delay.mul_f32(super::f32()),
             false => self.delay,
         };
         match self.max_times {

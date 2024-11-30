@@ -362,7 +362,11 @@ where
 }
 
 #[cfg(test)]
-#[cfg(any(feature = "tokio-sleep", feature = "gloo-timers-sleep"))]
+#[cfg(any(
+    feature = "tokio-sleep",
+    feature = "gloo-timers-sleep",
+    feature = "embassy-time"
+))]
 mod tests {
     use alloc::string::ToString;
     use anyhow::{anyhow, Result};
