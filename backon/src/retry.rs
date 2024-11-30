@@ -319,7 +319,11 @@ where
 }
 
 #[cfg(test)]
-#[cfg(any(feature = "tokio-sleep", feature = "gloo-timers-sleep",))]
+#[cfg(any(
+    feature = "tokio-sleep",
+    feature = "gloo-timers-sleep",
+    feature = "embassy-time"
+))]
 mod default_sleeper_tests {
     extern crate alloc;
 
