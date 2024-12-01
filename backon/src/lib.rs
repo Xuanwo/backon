@@ -45,7 +45,6 @@
 //! |---------------------|--------------------|-------------|---------------|
 //! | [`TokioSleeper`]    | tokio-sleep        | non-wasm32  |  Yes          |
 //! | [`GlooTimersSleep`] | gloo-timers-sleep  |   wasm32    |  Yes          |
-//! | [`EmbassySleep`]    | embassy-sleep      |   no_std    |  Yes          |
 //! | [`StdSleeper`]      | std-blocking-sleep |    std      |  No           |
 //!
 //! ## Custom Sleeper
@@ -172,8 +171,6 @@ pub use sleep::GlooTimersSleep;
 pub use sleep::Sleeper;
 #[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 pub use sleep::TokioSleeper;
-#[cfg(all(not(feature="std"), feature = "embassy-sleep"))]
-pub use sleep::EmbassySleep;
 
 mod blocking_retry;
 pub use blocking_retry::{BlockingRetry, BlockingRetryable};

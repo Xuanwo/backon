@@ -36,11 +36,7 @@ impl<F: Fn(Duration) -> Fut + 'static, Fut: Future<Output = ()>> Sleeper for F {
 /// The default implementation of `Sleeper` when no features are enabled.
 ///
 /// It will fail to compile if a containing [`Retry`][crate::Retry] is `.await`ed without calling [`Retry::sleep`][crate::Retry::sleep] to provide a valid sleeper.
-#[cfg(all(
-    not(feature = "tokio-sleep"),
-    not(feature = "gloo-timers-sleep"),
-    not(feature = "embassy-sleep")
-))]
+#[cfg(all(not(feature = "tokio-sleep"), not(feature = "gloo-timers-sleep"),))]
 pub type DefaultSleeper = PleaseEnableAFeatureOrProvideACustomSleeper;
 /// The default implementation of `Sleeper` while feature `tokio-sleep` enabled.
 ///
@@ -52,11 +48,6 @@ pub type DefaultSleeper = TokioSleeper;
 /// It uses `gloo_timers::sleep::sleep`.
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 pub type DefaultSleeper = GlooTimersSleep;
-/// The default implementation of `Sleeper` while feature `embassy-sleep` enabled.
-///
-/// It uses `embassy_time::Timer`.
-#[cfg(all(not(feature = "std"), feature = "embassy-sleep"))]
-pub type DefaultSleeper = EmbassySleep;
 
 /// A placeholder type that does not implement [`Sleeper`] and will therefore fail to compile if used as one.
 ///
@@ -98,19 +89,5 @@ impl Sleeper for GlooTimersSleep {
 
     fn sleep(&self, dur: Duration) -> Self::Sleep {
         gloo_timers::future::sleep(dur)
-    }
-}
-
-/// The default implementation of `Sleeper` utilizes `embassy-time::Timer`.
-#[cfg(all(not(feature = "std"), feature = "embassy-sleep"))]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct EmbassySleep;
-
-#[cfg(all(not(feature = "std"), feature = "embassy-sleep"))]
-impl Sleeper for EmbassySleep {
-    type Sleep = embassy_time::Timer;
-
-    fn sleep(&self, dur: Duration) -> Self::Sleep {
-        embassy_time::Timer::after_millis(dur.as_millis() as u64)
     }
 }
