@@ -21,14 +21,15 @@ targets = [
 
 [features]
 default = ["std-blocking-sleep", "tokio-sleep", "gloo-timers-sleep", "std"]
-# default =[]
 std-blocking-sleep = []
 gloo-timers-sleep = ["gloo-timers/futures"]
 tokio-sleep = ["tokio/time"]
+embassy-sleep = ["embassy-time"]
 std = ["fastrand/std"]
 
 [dependencies]
 fastrand = { version = "2", default-features = false }
+embassy-time = { version = "0.3", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1", optional = true }
