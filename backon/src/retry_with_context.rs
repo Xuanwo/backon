@@ -365,7 +365,6 @@ where
 #[cfg(any(
     feature = "tokio-sleep",
     feature = "gloo-timers-sleep",
-    feature = "embassy-time"
 ))]
 mod tests {
     extern crate alloc;

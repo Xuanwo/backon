@@ -2,6 +2,8 @@ use core::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 
+use super::Random;
+
 /// FibonacciBuilder is used to build a [`FibonacciBackoff`] which offers a delay with Fibonacci-based retries.
 ///
 /// # Default
@@ -163,6 +165,18 @@ pub struct FibonacciBackoff {
     previous_delay: Option<Duration>,
     current_delay: Option<Duration>,
     attempts: usize,
+}
+
+impl Random for FibonacciBackoff {
+    #[cfg(not(feature = "std"))]
+    fn seed(&self) -> u64 {
+        self.seed
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn set_seed(&mut self, seed: u64) {
+        self.seed = seed;
+    }
 }
 
 impl Iterator for FibonacciBackoff {

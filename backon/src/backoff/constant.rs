@@ -2,6 +2,8 @@ use core::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 
+use super::Random;
+
 /// ConstantBuilder is used to create a [`ConstantBackoff`], providing a steady delay with a fixed number of retries.
 ///
 /// # Default
