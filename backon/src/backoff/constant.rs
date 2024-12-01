@@ -2,6 +2,8 @@ use core::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 
+use super::Random;
+
 /// ConstantBuilder is used to create a [`ConstantBackoff`], providing a steady delay with a fixed number of retries.
 ///
 /// # Default
@@ -36,6 +38,7 @@ pub struct ConstantBuilder {
     delay: Duration,
     max_times: Option<usize>,
     jitter: bool,
+    seed: u64,
 }
 
 impl Default for ConstantBuilder {
@@ -44,6 +47,7 @@ impl Default for ConstantBuilder {
             delay: Duration::from_secs(1),
             max_times: Some(3),
             jitter: false,
+            seed: 0x2fdb0020ffc7722b,
         }
     }
 }
@@ -61,11 +65,17 @@ impl ConstantBuilder {
         self
     }
 
-    /// Set jitter for the backoff.
+    /// Enable jitter for the backoff.
     ///
     /// Jitter is a random value added to the delay to prevent a thundering herd problem.
     pub fn with_jitter(mut self) -> Self {
         self.jitter = true;
+        self
+    }
+
+    /// Set the seed value for the jitter random number generator.
+    pub fn with_jitter_seed(mut self, seed: u64) -> Self {
+        self.seed = seed;
         self
     }
 
@@ -90,6 +100,8 @@ impl BackoffBuilder for ConstantBuilder {
 
             attempts: 0,
             jitter: self.jitter,
+            #[cfg(not(feature = "std"))]
+            seed: self.seed,
         }
     }
 }
@@ -113,14 +125,29 @@ pub struct ConstantBackoff {
 
     attempts: usize,
     jitter: bool,
+    #[cfg(not(feature = "std"))]
+    seed: u64,
+}
+
+impl Random for ConstantBackoff {
+    #[cfg(not(feature = "std"))]
+    fn seed(&self) -> u64 {
+        self.seed
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn set_seed(&mut self, seed: u64) {
+        self.seed = seed;
+    }
 }
 
 impl Iterator for ConstantBackoff {
     type Item = Duration;
 
     fn next(&mut self) -> Option<Self::Item> {
+        let jitter = self.jitter();
         let delay = || match self.jitter {
-            true => self.delay + self.delay.mul_f32(super::f32()),
+            true => self.delay + self.delay.mul_f32(jitter),
             false => self.delay,
         };
         match self.max_times {

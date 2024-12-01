@@ -2,6 +2,8 @@ use core::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 
+use super::Random;
+
 /// ExponentialBuilder is used to construct an [`ExponentialBackoff`] that offers delays with exponential retries.
 ///
 /// # Default
@@ -41,6 +43,7 @@ pub struct ExponentialBuilder {
     min_delay: Duration,
     max_delay: Option<Duration>,
     max_times: Option<usize>,
+    seed: u64,
 }
 
 impl Default for ExponentialBuilder {
@@ -51,17 +54,24 @@ impl Default for ExponentialBuilder {
             min_delay: Duration::from_secs(1),
             max_delay: Some(Duration::from_secs(60)),
             max_times: Some(3),
+            seed: 0x2fdb0020ffc7722b,
         }
     }
 }
 
 impl ExponentialBuilder {
-    /// Set the jitter for the backoff.
+    /// Enable jitter for the backoff.
     ///
     /// When jitter is enabled, [`ExponentialBackoff`] will add a random jitter within `(0, min_delay)`
     /// to the current delay.
     pub fn with_jitter(mut self) -> Self {
         self.jitter = true;
+        self
+    }
+
+    /// Set the seed value for the jitter random number generator.
+    pub fn with_jitter_seed(mut self, seed: u64) -> Self {
+        self.seed = seed;
         self
     }
 
@@ -126,6 +136,8 @@ impl BackoffBuilder for ExponentialBuilder {
     fn build(self) -> Self::Backoff {
         ExponentialBackoff {
             jitter: self.jitter,
+            #[cfg(not(feature = "std"))]
+            seed: self.seed,
             factor: self.factor,
             min_delay: self.min_delay,
             max_delay: self.max_delay,
@@ -152,6 +164,8 @@ impl BackoffBuilder for &ExponentialBuilder {
 #[derive(Debug)]
 pub struct ExponentialBackoff {
     jitter: bool,
+    #[cfg(not(feature = "std"))]
+    seed: u64,
     factor: f32,
     min_delay: Duration,
     max_delay: Option<Duration>,
@@ -159,6 +173,18 @@ pub struct ExponentialBackoff {
 
     current_delay: Option<Duration>,
     attempts: usize,
+}
+
+impl Random for ExponentialBackoff {
+    #[cfg(not(feature = "std"))]
+    fn seed(&self) -> u64 {
+        self.seed
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn set_seed(&mut self, seed: u64) {
+        self.seed = seed;
+    }
 }
 
 impl Iterator for ExponentialBackoff {
@@ -194,7 +220,7 @@ impl Iterator for ExponentialBackoff {
         };
         // If jitter is enabled, add random jitter based on min delay.
         if self.jitter {
-            tmp_cur = tmp_cur.saturating_add(self.min_delay.mul_f32(super::f32()));
+            tmp_cur = tmp_cur.saturating_add(self.min_delay.mul_f32(self.jitter()));
         }
         Some(tmp_cur)
     }
@@ -313,6 +339,7 @@ mod tests {
     fn test_exponential_max_delay_without_default_1() {
         let mut exp = ExponentialBuilder {
             jitter: false,
+            seed: 0x2fdb0020ffc7722b,
             factor: 10_000_000_000_f32,
             min_delay: Duration::from_secs(1),
             max_delay: None,
@@ -330,6 +357,7 @@ mod tests {
     fn test_exponential_max_delay_without_default_2() {
         let mut exp = ExponentialBuilder {
             jitter: true,
+            seed: 0x2fdb0020ffc7722b,
             factor: 10_000_000_000_f32,
             min_delay: Duration::from_secs(10_000_000_000),
             max_delay: None,
@@ -347,6 +375,7 @@ mod tests {
     fn test_exponential_max_delay_without_default_3() {
         let mut exp = ExponentialBuilder {
             jitter: false,
+            seed: 0x2fdb0020ffc7722b,
             factor: 10_000_000_000_f32,
             min_delay: Duration::from_secs(10_000_000_000),
             max_delay: Some(Duration::from_secs(60_000_000_000)),

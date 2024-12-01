@@ -13,17 +13,23 @@ mod exponential;
 pub use exponential::ExponentialBackoff;
 pub use exponential::ExponentialBuilder;
 
-#[cfg(feature = "std")]
-fn f32() -> f32 {
-    fastrand::f32()
-}
+trait Random {
+    #[cfg(not(feature = "std"))]
+    fn seed(&self) -> u64;
 
-#[cfg(all(not(feature = "std"), feature = "embassy-time"))]
-fn f32() -> f32 {
-    fastrand::Rng::with_seed(embassy_time::Instant::now().as_micros()).f32()
-}
+    #[cfg(not(feature = "std"))]
+    fn set_seed(&mut self, seed: u64);
 
-#[cfg(all(not(feature = "std"), not(feature = "embassy-time")))]
-fn f32() -> f32 {
-    fastrand::Rng::with_seed(0x2fdb0020ffc7722b).f32()
+    fn jitter(&mut self) -> f32 {
+        #[cfg(feature = "std")]
+        return fastrand::f32();
+
+        #[cfg(not(feature = "std"))]
+        {
+            let result = fastrand::Rng::with_seed(self.seed()).f32();
+            // change the seed to get a new random number next time
+            self.set_seed(self.seed() ^ result.to_bits() as u64);
+            result
+        }
+    }
 }

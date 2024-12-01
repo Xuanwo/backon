@@ -2,6 +2,8 @@ use core::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 
+use super::Random;
+
 /// FibonacciBuilder is used to build a [`FibonacciBackoff`] which offers a delay with Fibonacci-based retries.
 ///
 /// # Default
@@ -36,6 +38,7 @@ use crate::backoff::BackoffBuilder;
 #[derive(Debug, Clone, Copy)]
 pub struct FibonacciBuilder {
     jitter: bool,
+    seed: u64,
     min_delay: Duration,
     max_delay: Option<Duration>,
     max_times: Option<usize>,
@@ -45,6 +48,7 @@ impl Default for FibonacciBuilder {
     fn default() -> Self {
         Self {
             jitter: false,
+            seed: 0x2fdb0020ffc7722b,
             min_delay: Duration::from_secs(1),
             max_delay: Some(Duration::from_secs(60)),
             max_times: Some(3),
@@ -58,6 +62,12 @@ impl FibonacciBuilder {
     /// When jitter is enabled, FibonacciBackoff will add a random jitter between `(0, min_delay)` to the delay.
     pub fn with_jitter(mut self) -> Self {
         self.jitter = true;
+        self
+    }
+
+    /// Set the seed value for the jitter random number generator.
+    pub fn with_jitter_seed(mut self, seed: u64) -> Self {
+        self.seed = seed;
         self
     }
 
@@ -110,6 +120,8 @@ impl BackoffBuilder for FibonacciBuilder {
     fn build(self) -> Self::Backoff {
         FibonacciBackoff {
             jitter: self.jitter,
+            #[cfg(not(feature = "std"))]
+            seed: self.seed,
             min_delay: self.min_delay,
             max_delay: self.max_delay,
             max_times: self.max_times,
@@ -136,6 +148,8 @@ impl BackoffBuilder for &FibonacciBuilder {
 #[derive(Debug)]
 pub struct FibonacciBackoff {
     jitter: bool,
+    #[cfg(not(feature = "std"))]
+    seed: u64,
     min_delay: Duration,
     max_delay: Option<Duration>,
     max_times: Option<usize>,
@@ -143,6 +157,18 @@ pub struct FibonacciBackoff {
     previous_delay: Option<Duration>,
     current_delay: Option<Duration>,
     attempts: usize,
+}
+
+impl Random for FibonacciBackoff {
+    #[cfg(not(feature = "std"))]
+    fn seed(&self) -> u64 {
+        self.seed
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn set_seed(&mut self, seed: u64) {
+        self.seed = seed;
+    }
 }
 
 impl Iterator for FibonacciBackoff {
@@ -162,7 +188,7 @@ impl Iterator for FibonacciBackoff {
 
                 // If jitter is enabled, add random jitter based on min delay.
                 if self.jitter {
-                    next += self.min_delay.mul_f32(super::f32());
+                    next += self.min_delay.mul_f32(self.jitter());
                 }
 
                 Some(next)
@@ -181,7 +207,7 @@ impl Iterator for FibonacciBackoff {
 
                 // If jitter is enabled, add random jitter based on min delay.
                 if self.jitter {
-                    next += self.min_delay.mul_f32(super::f32());
+                    next += self.min_delay.mul_f32(self.jitter());
                 }
 
                 Some(next)
