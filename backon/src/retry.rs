@@ -324,6 +324,8 @@ where
     feature = "gloo-timers-sleep",
 ))]
 mod default_sleeper_tests {
+    extern crate alloc;
+
     use alloc::string::ToString;
     use alloc::vec;
     use alloc::vec::Vec;
@@ -431,6 +433,8 @@ mod default_sleeper_tests {
 
 #[cfg(test)]
 mod custom_sleeper_tests {
+    extern crate alloc;
+
     use alloc::string::ToString;
     use core::{future::ready, time::Duration};
 
