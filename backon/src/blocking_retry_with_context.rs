@@ -182,6 +182,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    extern crate alloc;
+
     use super::*;
     use crate::ExponentialBuilder;
     use alloc::string::ToString;

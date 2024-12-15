@@ -154,8 +154,6 @@
 #[cfg(feature = "std-blocking-sleep")]
 extern crate std;
 
-extern crate alloc;
-
 mod backoff;
 pub use backoff::*;
 

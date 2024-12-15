@@ -368,6 +368,8 @@ where
     feature = "embassy-sleep"
 ))]
 mod tests {
+    extern crate alloc;
+
     use alloc::string::ToString;
     use anyhow::{anyhow, Result};
     use core::time::Duration;
