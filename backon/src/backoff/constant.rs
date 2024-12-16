@@ -2,8 +2,6 @@ use core::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 
-use super::Random;
-
 /// ConstantBuilder is used to create a [`ConstantBackoff`], providing a steady delay with a fixed number of retries.
 ///
 /// # Default
@@ -47,7 +45,7 @@ impl Default for ConstantBuilder {
             delay: Duration::from_secs(1),
             max_times: Some(3),
             jitter: false,
-            seed: 0x2fdb0020ffc7722b,
+            seed: 0x6261636b6f6e,
         }
     }
 }
@@ -101,7 +99,7 @@ impl BackoffBuilder for ConstantBuilder {
             attempts: 0,
             jitter: self.jitter,
             #[cfg(not(feature = "std"))]
-            seed: self.seed,
+            rng: fastrand::Rng::with_seed(self.seed),
         }
     }
 }
@@ -126,28 +124,25 @@ pub struct ConstantBackoff {
     attempts: usize,
     jitter: bool,
     #[cfg(not(feature = "std"))]
-    seed: u64,
-}
-
-impl Random for ConstantBackoff {
-    #[cfg(not(feature = "std"))]
-    fn seed(&self) -> u64 {
-        self.seed
-    }
-
-    #[cfg(not(feature = "std"))]
-    fn set_seed(&mut self, seed: u64) {
-        self.seed = seed;
-    }
+    rng: fastrand::Rng,
 }
 
 impl Iterator for ConstantBackoff {
     type Item = Duration;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let jitter = self.jitter();
-        let delay = || match self.jitter {
-            true => self.delay + self.delay.mul_f32(jitter),
+        #[cfg_attr(feature = "std", allow(unused_mut))]
+        let mut delay = || match self.jitter {
+            true => {
+                // get a random f32 between 0 and 1
+                #[cfg(not(feature = "std"))]
+                let rand = self.rng.f32();
+
+                #[cfg(feature = "std")]
+                let rand = fastrand::f32();
+
+                self.delay + self.delay.mul_f32(rand)
+            }
             false => self.delay,
         };
         match self.max_times {
