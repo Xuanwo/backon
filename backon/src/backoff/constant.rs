@@ -36,7 +36,7 @@ pub struct ConstantBuilder {
     delay: Duration,
     max_times: Option<usize>,
     jitter: bool,
-    seed: u64,
+    seed: Option<u64>,
 }
 
 impl Default for ConstantBuilder {
@@ -45,7 +45,7 @@ impl Default for ConstantBuilder {
             delay: Duration::from_secs(1),
             max_times: Some(3),
             jitter: false,
-            seed: 0x6261636b6f6e,
+            seed: None,
         }
     }
 }
@@ -71,9 +71,9 @@ impl ConstantBuilder {
         self
     }
 
-    /// Set the seed value for the jitter random number generator.
+    /// Set the seed value for the jitter random number generator. If no seed is given, a random seed is used in std and default seed is used in no_std.
     pub fn with_jitter_seed(mut self, seed: u64) -> Self {
-        self.seed = seed;
+        self.seed = Some(seed);
         self
     }
 
@@ -99,7 +99,9 @@ impl BackoffBuilder for ConstantBuilder {
             attempts: 0,
             jitter: self.jitter,
             #[cfg(not(feature = "std"))]
-            rng: fastrand::Rng::with_seed(self.seed),
+            rng: fastrand::Rng::with_seed(self.seed.unwrap_or(super::RANDOM_SEED)),
+            #[cfg(feature = "std")]
+            rng: fastrand::Rng::new(),
         }
     }
 }
@@ -123,7 +125,6 @@ pub struct ConstantBackoff {
 
     attempts: usize,
     jitter: bool,
-    #[cfg(not(feature = "std"))]
     rng: fastrand::Rng,
 }
 
@@ -133,16 +134,7 @@ impl Iterator for ConstantBackoff {
     fn next(&mut self) -> Option<Self::Item> {
         #[cfg_attr(feature = "std", allow(unused_mut))]
         let mut delay = || match self.jitter {
-            true => {
-                // get a random f32 between 0 and 1
-                #[cfg(not(feature = "std"))]
-                let rand = self.rng.f32();
-
-                #[cfg(feature = "std")]
-                let rand = fastrand::f32();
-
-                self.delay + self.delay.mul_f32(rand)
-            }
+            true => self.delay + self.delay.mul_f32(self.rng.f32()),
             false => self.delay,
         };
         match self.max_times {

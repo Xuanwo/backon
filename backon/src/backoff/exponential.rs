@@ -41,7 +41,7 @@ pub struct ExponentialBuilder {
     min_delay: Duration,
     max_delay: Option<Duration>,
     max_times: Option<usize>,
-    seed: u64,
+    seed: Option<u64>,
 }
 
 impl Default for ExponentialBuilder {
@@ -52,7 +52,7 @@ impl Default for ExponentialBuilder {
             min_delay: Duration::from_secs(1),
             max_delay: Some(Duration::from_secs(60)),
             max_times: Some(3),
-            seed: 0x6261636b6f6e,
+            seed: None,
         }
     }
 }
@@ -67,9 +67,9 @@ impl ExponentialBuilder {
         self
     }
 
-    /// Set the seed value for the jitter random number generator.
+    /// Set the seed value for the jitter random number generator. If no seed is given, a random seed is used in std and default seed is used in no_std.
     pub fn with_jitter_seed(mut self, seed: u64) -> Self {
-        self.seed = seed;
+        self.seed = Some(seed);
         self
     }
 
@@ -135,7 +135,9 @@ impl BackoffBuilder for ExponentialBuilder {
         ExponentialBackoff {
             jitter: self.jitter,
             #[cfg(not(feature = "std"))]
-            rng: fastrand::Rng::with_seed(self.seed),
+            rng: fastrand::Rng::with_seed(self.seed.unwrap_or(super::RANDOM_SEED)),
+            #[cfg(feature = "std")]
+            rng: fastrand::Rng::new(),
             factor: self.factor,
             min_delay: self.min_delay,
             max_delay: self.max_delay,
@@ -162,7 +164,6 @@ impl BackoffBuilder for &ExponentialBuilder {
 #[derive(Debug)]
 pub struct ExponentialBackoff {
     jitter: bool,
-    #[cfg(not(feature = "std"))]
     rng: fastrand::Rng,
     factor: f32,
     min_delay: Duration,
@@ -206,14 +207,7 @@ impl Iterator for ExponentialBackoff {
         };
         // If jitter is enabled, add random jitter based on min delay.
         if self.jitter {
-            // get a random f32 between 0 and 1
-            #[cfg(not(feature = "std"))]
-            let rand = self.rng.f32();
-
-            #[cfg(feature = "std")]
-            let rand = fastrand::f32();
-
-            tmp_cur = tmp_cur.saturating_add(self.min_delay.mul_f32(rand));
+            tmp_cur = tmp_cur.saturating_add(self.min_delay.mul_f32(self.rng.f32()));
         }
         Some(tmp_cur)
     }
