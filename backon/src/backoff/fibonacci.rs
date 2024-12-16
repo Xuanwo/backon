@@ -118,10 +118,17 @@ impl BackoffBuilder for FibonacciBuilder {
     fn build(self) -> Self::Backoff {
         FibonacciBackoff {
             jitter: self.jitter,
-            #[cfg(not(feature = "std"))]
-            rng: fastrand::Rng::with_seed(self.seed.unwrap_or(super::RANDOM_SEED)),
-            #[cfg(feature = "std")]
-            rng: fastrand::Rng::new(),
+            rng: if let Some(seed) = self.seed {
+                fastrand::Rng::with_seed(seed)
+            } else {
+                #[cfg(feature = "std")]
+                let rng = fastrand::Rng::new();
+
+                #[cfg(not(feature = "std"))]
+                let rng = fastrand::Rng::with_seed(super::RANDOM_SEED);
+
+                rng
+            },
             min_delay: self.min_delay,
             max_delay: self.max_delay,
             max_times: self.max_times,
