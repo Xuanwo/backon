@@ -2,8 +2,6 @@ use core::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 
-use super::Random;
-
 /// ExponentialBuilder is used to construct an [`ExponentialBackoff`] that offers delays with exponential retries.
 ///
 /// # Default
@@ -181,18 +179,6 @@ pub struct ExponentialBackoff {
 
     current_delay: Option<Duration>,
     attempts: usize,
-}
-
-impl Random for ExponentialBackoff {
-    #[cfg(not(feature = "std"))]
-    fn seed(&self) -> u64 {
-        self.seed
-    }
-
-    #[cfg(not(feature = "std"))]
-    fn set_seed(&mut self, seed: u64) {
-        self.seed = seed;
-    }
 }
 
 impl Iterator for ExponentialBackoff {
