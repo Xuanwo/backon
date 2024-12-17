@@ -333,7 +333,7 @@ mod tests {
     fn test_exponential_max_delay_without_default_1() {
         let mut exp = ExponentialBuilder {
             jitter: false,
-            seed: 0x2fdb0020ffc7722b,
+            seed: Some(0x2fdb0020ffc7722b),
             factor: 10_000_000_000_f32,
             min_delay: Duration::from_secs(1),
             max_delay: None,
@@ -351,7 +351,7 @@ mod tests {
     fn test_exponential_max_delay_without_default_2() {
         let mut exp = ExponentialBuilder {
             jitter: true,
-            seed: 0x2fdb0020ffc7722b,
+            seed: Some(0x2fdb0020ffc7722b),
             factor: 10_000_000_000_f32,
             min_delay: Duration::from_secs(10_000_000_000),
             max_delay: None,
@@ -369,7 +369,7 @@ mod tests {
     fn test_exponential_max_delay_without_default_3() {
         let mut exp = ExponentialBuilder {
             jitter: false,
-            seed: 0x2fdb0020ffc7722b,
+            seed: Some(0x2fdb0020ffc7722b),
             factor: 10_000_000_000_f32,
             min_delay: Duration::from_secs(10_000_000_000),
             max_delay: Some(Duration::from_secs(60_000_000_000)),
