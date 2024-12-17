@@ -216,7 +216,6 @@ impl Iterator for ExponentialBackoff {
         // If jitter is enabled, add random jitter based on min delay.
         if self.jitter {
             tmp_cur = tmp_cur.saturating_add(self.min_delay.mul_f32(self.rng.f32()));
-            tmp_cur = tmp_cur.saturating_add(self.min_delay.mul_f32(self.rng.f32()));
         }
         Some(tmp_cur)
     }
