@@ -28,7 +28,6 @@ tokio-sleep = ["tokio/time"]
 
 [dependencies]
 fastrand = { version = "2", default-features = false }
-embassy-time = { version = "0.3", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1", optional = true }
