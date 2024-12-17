@@ -29,7 +29,7 @@ pub type DefaultBlockingSleeper = PleaseEnableAFeatureOrProvideACustomSleeper;
 /// The default implementation of `Sleeper` while feature `std-blocking-sleep` enabled.
 ///
 /// it uses [`std::thread::sleep`].
-#[cfg(all(feature = "std-blocking-sleep", not(feature = "embassy-sleep")))]
+#[cfg(feature = "std-blocking-sleep")]
 pub type DefaultBlockingSleeper = StdSleeper;
 /// The default implementation of `Sleeper` while feature `embassy-sleep` enabled.
 ///
