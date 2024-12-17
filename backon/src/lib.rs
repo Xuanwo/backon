@@ -167,7 +167,7 @@ pub use retry_with_context::RetryableWithContext;
 
 mod sleep;
 pub use sleep::DefaultSleeper;
-#[cfg(all(not(feature="std"), feature = "embassy-sleep"))]
+#[cfg(all(not(feature = "std"), feature = "embassy-sleep"))]
 pub use sleep::EmbassySleep;
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 pub use sleep::GlooTimersSleep;
