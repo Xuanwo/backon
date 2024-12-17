@@ -14,4 +14,5 @@ pub use exponential::ExponentialBackoff;
 pub use exponential::ExponentialBuilder;
 
 // Random seed value for no_std (the value is "backon" in hex)
+#[cfg(not(feature = "std"))]
 const RANDOM_SEED: u64 = 0x6261636b6f6e;
