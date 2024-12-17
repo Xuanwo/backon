@@ -36,6 +36,7 @@ pub struct ConstantBuilder {
     delay: Duration,
     max_times: Option<usize>,
     jitter: bool,
+    seed: Option<u64>,
 }
 
 impl Default for ConstantBuilder {
@@ -44,6 +45,7 @@ impl Default for ConstantBuilder {
             delay: Duration::from_secs(1),
             max_times: Some(3),
             jitter: false,
+            seed: None,
         }
     }
 }
@@ -61,11 +63,17 @@ impl ConstantBuilder {
         self
     }
 
-    /// Set jitter for the backoff.
+    /// Enable jitter for the backoff.
     ///
     /// Jitter is a random value added to the delay to prevent a thundering herd problem.
     pub fn with_jitter(mut self) -> Self {
         self.jitter = true;
+        self
+    }
+
+    /// Set the seed value for the jitter random number generator. If no seed is given, a random seed is used in std and default seed is used in no_std.
+    pub fn with_jitter_seed(mut self, seed: u64) -> Self {
+        self.seed = Some(seed);
         self
     }
 
@@ -90,6 +98,17 @@ impl BackoffBuilder for ConstantBuilder {
 
             attempts: 0,
             jitter: self.jitter,
+            rng: if let Some(seed) = self.seed {
+                fastrand::Rng::with_seed(seed)
+            } else {
+                #[cfg(feature = "std")]
+                let rng = fastrand::Rng::new();
+
+                #[cfg(not(feature = "std"))]
+                let rng = fastrand::Rng::with_seed(super::RANDOM_SEED);
+
+                rng
+            },
         }
     }
 }
@@ -113,14 +132,15 @@ pub struct ConstantBackoff {
 
     attempts: usize,
     jitter: bool,
+    rng: fastrand::Rng,
 }
 
 impl Iterator for ConstantBackoff {
     type Item = Duration;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let delay = || match self.jitter {
-            true => self.delay + self.delay.mul_f32(fastrand::f32()),
+        let mut delay = || match self.jitter {
+            true => self.delay + self.delay.mul_f32(self.rng.f32()),
             false => self.delay,
         };
         match self.max_times {

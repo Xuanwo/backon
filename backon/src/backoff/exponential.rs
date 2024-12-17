@@ -41,6 +41,7 @@ pub struct ExponentialBuilder {
     min_delay: Duration,
     max_delay: Option<Duration>,
     max_times: Option<usize>,
+    seed: Option<u64>,
 }
 
 impl Default for ExponentialBuilder {
@@ -51,17 +52,24 @@ impl Default for ExponentialBuilder {
             min_delay: Duration::from_secs(1),
             max_delay: Some(Duration::from_secs(60)),
             max_times: Some(3),
+            seed: None,
         }
     }
 }
 
 impl ExponentialBuilder {
-    /// Set the jitter for the backoff.
+    /// Enable jitter for the backoff.
     ///
     /// When jitter is enabled, [`ExponentialBackoff`] will add a random jitter within `(0, min_delay)`
     /// to the current delay.
     pub fn with_jitter(mut self) -> Self {
         self.jitter = true;
+        self
+    }
+
+    /// Set the seed value for the jitter random number generator. If no seed is given, a random seed is used in std and default seed is used in no_std.
+    pub fn with_jitter_seed(mut self, seed: u64) -> Self {
+        self.seed = Some(seed);
         self
     }
 
@@ -126,6 +134,17 @@ impl BackoffBuilder for ExponentialBuilder {
     fn build(self) -> Self::Backoff {
         ExponentialBackoff {
             jitter: self.jitter,
+            rng: if let Some(seed) = self.seed {
+                fastrand::Rng::with_seed(seed)
+            } else {
+                #[cfg(feature = "std")]
+                let rng = fastrand::Rng::new();
+
+                #[cfg(not(feature = "std"))]
+                let rng = fastrand::Rng::with_seed(super::RANDOM_SEED);
+
+                rng
+            },
             factor: self.factor,
             min_delay: self.min_delay,
             max_delay: self.max_delay,
@@ -152,6 +171,7 @@ impl BackoffBuilder for &ExponentialBuilder {
 #[derive(Debug)]
 pub struct ExponentialBackoff {
     jitter: bool,
+    rng: fastrand::Rng,
     factor: f32,
     min_delay: Duration,
     max_delay: Option<Duration>,
@@ -194,7 +214,7 @@ impl Iterator for ExponentialBackoff {
         };
         // If jitter is enabled, add random jitter based on min delay.
         if self.jitter {
-            tmp_cur = tmp_cur.saturating_add(self.min_delay.mul_f32(fastrand::f32()));
+            tmp_cur = tmp_cur.saturating_add(self.min_delay.mul_f32(self.rng.f32()));
         }
         Some(tmp_cur)
     }
@@ -313,6 +333,7 @@ mod tests {
     fn test_exponential_max_delay_without_default_1() {
         let mut exp = ExponentialBuilder {
             jitter: false,
+            seed: Some(0x2fdb0020ffc7722b),
             factor: 10_000_000_000_f32,
             min_delay: Duration::from_secs(1),
             max_delay: None,
@@ -330,6 +351,7 @@ mod tests {
     fn test_exponential_max_delay_without_default_2() {
         let mut exp = ExponentialBuilder {
             jitter: true,
+            seed: Some(0x2fdb0020ffc7722b),
             factor: 10_000_000_000_f32,
             min_delay: Duration::from_secs(10_000_000_000),
             max_delay: None,
@@ -347,6 +369,7 @@ mod tests {
     fn test_exponential_max_delay_without_default_3() {
         let mut exp = ExponentialBuilder {
             jitter: false,
+            seed: Some(0x2fdb0020ffc7722b),
             factor: 10_000_000_000_f32,
             min_delay: Duration::from_secs(10_000_000_000),
             max_delay: Some(Duration::from_secs(60_000_000_000)),

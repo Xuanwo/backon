@@ -45,7 +45,7 @@
 //! |---------------------|--------------------|-------------|---------------|
 //! | [`TokioSleeper`]    | tokio-sleep        | non-wasm32  |  Yes          |
 //! | [`GlooTimersSleep`] | gloo-timers-sleep  |   wasm32    |  Yes          |
-//! | [`StdSleeper`]      | std-blocking-sleep |    all      |  No           |
+//! | [`StdSleeper`]      | std-blocking-sleep |    std      |  No           |
 //!
 //! ## Custom Sleeper
 //!
@@ -152,8 +152,6 @@
 
 #[cfg(feature = "std-blocking-sleep")]
 extern crate std;
-
-extern crate alloc;
 
 mod backoff;
 pub use backoff::*;
