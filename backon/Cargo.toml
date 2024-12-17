@@ -22,8 +22,6 @@ targets = [
 [features]
 default = ["std", "std-blocking-sleep", "tokio-sleep", "gloo-timers-sleep"]
 std = ["fastrand/std"]
-default = ["std", "std-blocking-sleep", "tokio-sleep", "gloo-timers-sleep"]
-std = ["fastrand/std"]
 std-blocking-sleep = []
 gloo-timers-sleep = ["gloo-timers/futures"]
 tokio-sleep = ["tokio/time"]
