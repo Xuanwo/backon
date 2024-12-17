@@ -44,6 +44,13 @@ pub struct FibonacciBuilder {
 
 impl Default for FibonacciBuilder {
     fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl FibonacciBuilder {
+    /// Create a new `FibonacciBuilder` with default values.
+    pub const fn new() -> Self {
         Self {
             jitter: false,
             seed: None,
@@ -52,13 +59,11 @@ impl Default for FibonacciBuilder {
             max_times: Some(3),
         }
     }
-}
 
-impl FibonacciBuilder {
     /// Set the jitter for the backoff.
     ///
     /// When jitter is enabled, FibonacciBackoff will add a random jitter between `(0, min_delay)` to the delay.
-    pub fn with_jitter(mut self) -> Self {
+    pub const fn with_jitter(mut self) -> Self {
         self.jitter = true;
         self
     }
@@ -70,7 +75,7 @@ impl FibonacciBuilder {
     }
 
     /// Set the minimum delay for the backoff.
-    pub fn with_min_delay(mut self, min_delay: Duration) -> Self {
+    pub const fn with_min_delay(mut self, min_delay: Duration) -> Self {
         self.min_delay = min_delay;
         self
     }
@@ -78,7 +83,7 @@ impl FibonacciBuilder {
     /// Set the maximum delay for the current backoff.
     ///
     /// The delay will not increase if the current delay exceeds the maximum delay.
-    pub fn with_max_delay(mut self, max_delay: Duration) -> Self {
+    pub const fn with_max_delay(mut self, max_delay: Duration) -> Self {
         self.max_delay = Some(max_delay);
         self
     }
@@ -88,7 +93,7 @@ impl FibonacciBuilder {
     /// The delay will keep increasing.
     ///
     /// _The delay will saturate at `Duration::MAX` which is an **unrealistic** delay._
-    pub fn without_max_delay(mut self) -> Self {
+    pub const fn without_max_delay(mut self) -> Self {
         self.max_delay = None;
         self
     }
@@ -96,7 +101,7 @@ impl FibonacciBuilder {
     /// Set the maximum number of attempts for the current backoff.
     ///
     /// The backoff will stop if the maximum number of attempts is reached.
-    pub fn with_max_times(mut self, max_times: usize) -> Self {
+    pub const fn with_max_times(mut self, max_times: usize) -> Self {
         self.max_times = Some(max_times);
         self
     }
@@ -106,7 +111,7 @@ impl FibonacciBuilder {
     /// The backoff will not stop by itself.
     ///
     /// _The backoff could stop reaching `usize::MAX` attempts but this is **unrealistic**._
-    pub fn without_max_times(mut self) -> Self {
+    pub const fn without_max_times(mut self) -> Self {
         self.max_times = None;
         self
     }
@@ -212,13 +217,17 @@ impl Iterator for FibonacciBackoff {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use core::time::Duration;
 
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
-    use crate::BackoffBuilder;
-    use crate::FibonacciBuilder;
+    const TEST_BUILDER: FibonacciBuilder = FibonacciBuilder::new()
+        .with_jitter()
+        .with_min_delay(Duration::from_secs(2))
+        .with_max_delay(Duration::from_secs(30))
+        .with_max_times(5);
 
     #[test]
     fn test_fibonacci_default() {
@@ -321,5 +330,15 @@ mod tests {
         for _ in 0..10_000 {
             assert_eq!(Some(Duration::from_secs(0)), fib.next());
         }
+    }
+
+    // allow assertions on constants because they are not optimized out by unit tests
+    #[allow(clippy::assertions_on_constants)]
+    #[test]
+    fn test_fibonacci_const_builder() {
+        assert!(TEST_BUILDER.jitter);
+        assert_eq!(TEST_BUILDER.min_delay, Duration::from_secs(2));
+        assert_eq!(TEST_BUILDER.max_delay, Some(Duration::from_secs(30)));
+        assert_eq!(TEST_BUILDER.max_times, Some(5));
     }
 }
