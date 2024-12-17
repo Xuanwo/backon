@@ -42,7 +42,6 @@ pub struct ExponentialBuilder {
     max_delay: Option<Duration>,
     max_times: Option<usize>,
     seed: Option<u64>,
-    seed: Option<u64>,
 }
 
 impl Default for ExponentialBuilder {

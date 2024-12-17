@@ -167,13 +167,13 @@ pub use retry_with_context::RetryableWithContext;
 
 mod sleep;
 pub use sleep::DefaultSleeper;
+#[cfg(all(not(feature="std"), feature = "embassy-sleep"))]
+pub use sleep::EmbassySleep;
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 pub use sleep::GlooTimersSleep;
 pub use sleep::Sleeper;
 #[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
 pub use sleep::TokioSleeper;
-#[cfg(all(not(feature="std"), feature = "embassy-sleep"))]
-pub use sleep::EmbassySleep;
 
 mod blocking_retry;
 pub use blocking_retry::{BlockingRetry, BlockingRetryable};
