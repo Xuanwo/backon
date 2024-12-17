@@ -25,6 +25,7 @@ std = ["fastrand/std"]
 std-blocking-sleep = []
 gloo-timers-sleep = ["gloo-timers/futures"]
 tokio-sleep = ["tokio/time"]
+embassy-sleep = ["embassy-time"]
 
 [dependencies]
 fastrand = { version = "2", default-features = false }
