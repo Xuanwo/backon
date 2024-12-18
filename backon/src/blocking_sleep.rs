@@ -24,13 +24,18 @@ impl<F: Fn(Duration) + 'static> BlockingSleeper for F {
 /// The default implementation of `Sleeper` when no features are enabled.
 ///
 /// It will fail to compile if a containing [`Retry`][crate::Retry] is `.await`ed without calling [`Retry::sleep`][crate::Retry::sleep] to provide a valid sleeper.
-#[cfg(not(feature = "std-blocking-sleep"))]
+#[cfg(all(not(feature = "std-blocking-sleep"), not(feature = "embassy-sleep")))]
 pub type DefaultBlockingSleeper = PleaseEnableAFeatureOrProvideACustomSleeper;
 /// The default implementation of `Sleeper` while feature `std-blocking-sleep` enabled.
 ///
 /// it uses [`std::thread::sleep`].
 #[cfg(feature = "std-blocking-sleep")]
 pub type DefaultBlockingSleeper = StdSleeper;
+/// The default implementation of `Sleeper` while feature `embassy-sleep` enabled.
+///
+/// it uses [`embassy_time::block_for`].
+#[cfg(all(not(feature = "std-blocking-sleep"), feature = "embassy-sleep"))]
+pub type DefaultBlockingSleeper = EmbassySleeper;
 
 /// A placeholder type that does not implement [`Sleeper`] and will therefore fail to compile if used as one.
 ///
@@ -51,5 +56,17 @@ pub struct StdSleeper;
 impl BlockingSleeper for StdSleeper {
     fn sleep(&self, dur: Duration) {
         std::thread::sleep(dur)
+    }
+}
+
+/// The no_std implementation of `StdSleeper`.
+#[cfg(feature = "embassy-sleep")]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct EmbassySleeper;
+
+#[cfg(feature = "embassy-sleep")]
+impl BlockingSleeper for EmbassySleeper {
+    fn sleep(&self, dur: Duration) {
+        embassy_time::block_for(embassy_time::Duration::from_millis(dur.as_millis() as u64));
     }
 }
