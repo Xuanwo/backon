@@ -53,15 +53,3 @@ impl BlockingSleeper for StdSleeper {
         std::thread::sleep(dur)
     }
 }
-
-/// A no_std blocking sleeper
-#[cfg(feature = "embassy-sleep")]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct EmbassySleeper;
-
-#[cfg(feature = "embassy-sleep")]
-impl BlockingSleeper for EmbassySleeper {
-    fn sleep(&self, dur: Duration) {
-        embassy_time::block_for(embassy_time::Duration::from_millis(dur.as_millis() as u64));
-    }
-}

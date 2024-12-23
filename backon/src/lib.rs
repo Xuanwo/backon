@@ -45,7 +45,7 @@
 //! |---------------------|--------------------|-------------|---------------|
 //! | [`TokioSleeper`]    | tokio-sleep        | non-wasm32  |  Yes          |
 //! | [`GlooTimersSleep`] | gloo-timers-sleep  |   wasm32    |  Yes          |
-//! | [`EmbassySleeper`]  | embassy-sleep      |   no_std    |  Yes          |
+//! | [`EmbassySleep`]    | embassy-sleep      |   no_std    |  Yes          |
 //! | [`StdSleeper`]      | std-blocking-sleep |    std      |  No           |
 //!
 //! ## Custom Sleeper
@@ -166,9 +166,8 @@ pub use retry_with_context::RetryWithContext;
 pub use retry_with_context::RetryableWithContext;
 
 mod sleep;
+#[cfg(feature = "std")]
 pub use sleep::DefaultSleeper;
-#[cfg(all(not(feature = "std"), feature = "embassy-sleep"))]
-pub use sleep::EmbassySleeper;
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 pub use sleep::GlooTimersSleep;
 pub use sleep::Sleeper;
@@ -183,9 +182,17 @@ pub use blocking_retry_with_context::{BlockingRetryWithContext, BlockingRetryabl
 
 mod blocking_sleep;
 pub use blocking_sleep::BlockingSleeper;
+#[cfg(feature = "std")]
 pub use blocking_sleep::DefaultBlockingSleeper;
 #[cfg(feature = "std-blocking-sleep")]
 pub use blocking_sleep::StdSleeper;
+
+#[cfg(feature = "embassy-sleep")]
+mod embassy_timer_sleep;
+#[cfg(feature = "embassy-sleep")]
+pub use embassy_timer_sleep::DefaultBlockingSleeper;
+#[cfg(feature = "embassy-sleep")]
+pub use embassy_timer_sleep::DefaultSleeper;
 
 #[cfg(docsrs)]
 pub mod docs;

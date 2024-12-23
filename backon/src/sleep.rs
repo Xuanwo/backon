@@ -95,17 +95,3 @@ impl Sleeper for GlooTimersSleep {
         gloo_timers::future::sleep(dur)
     }
 }
-
-/// The embassy-sleep implementation of `Sleeper` utilizes `embassy-time::Timer`.
-#[cfg(feature = "embassy-sleep")]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct EmbassySleeper;
-
-#[cfg(feature = "embassy-sleep")]
-impl Sleeper for EmbassySleeper {
-    type Sleep = embassy_time::Timer;
-
-    fn sleep(&self, dur: Duration) -> Self::Sleep {
-        embassy_time::Timer::after_millis(dur.as_millis() as u64)
-    }
-}
