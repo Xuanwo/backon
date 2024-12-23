@@ -52,11 +52,6 @@ pub type DefaultSleeper = TokioSleeper;
 /// It uses `gloo_timers::sleep::sleep`.
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 pub type DefaultSleeper = GlooTimersSleep;
-/// The default implementation of `Sleeper` while feature `embassy-sleep` enabled.
-///
-/// It uses `embassy_time::Timer`.
-#[cfg(all(not(feature = "std"), feature = "embassy-sleep"))]
-pub type DefaultSleeper = EmbassySleep;
 
 /// A placeholder type that does not implement [`Sleeper`] and will therefore fail to compile if used as one.
 ///
@@ -101,12 +96,12 @@ impl Sleeper for GlooTimersSleep {
     }
 }
 
-/// The default implementation of `Sleeper` utilizes `embassy-time::Timer`.
-#[cfg(all(not(feature = "std"), feature = "embassy-sleep"))]
+/// The embassy-sleep implementation of `Sleeper` utilizes `embassy-time::Timer`.
+#[cfg(feature = "embassy-sleep")]
 #[derive(Clone, Copy, Debug, Default)]
-pub struct EmbassySleep;
+pub struct EmbassySleeper;
 
-#[cfg(all(not(feature = "std"), feature = "embassy-sleep"))]
+#[cfg(feature = "embassy-sleep")]
 impl Sleeper for EmbassySleep {
     type Sleep = embassy_time::Timer;
 

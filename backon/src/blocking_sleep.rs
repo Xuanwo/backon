@@ -31,11 +31,6 @@ pub type DefaultBlockingSleeper = PleaseEnableAFeatureOrProvideACustomSleeper;
 /// it uses [`std::thread::sleep`].
 #[cfg(feature = "std-blocking-sleep")]
 pub type DefaultBlockingSleeper = StdSleeper;
-/// The default implementation of `Sleeper` while feature `embassy-sleep` enabled.
-///
-/// it uses [`embassy_time::block_for`].
-#[cfg(all(not(feature = "std-blocking-sleep"), feature = "embassy-sleep"))]
-pub type DefaultBlockingSleeper = EmbassySleeper;
 
 /// A placeholder type that does not implement [`Sleeper`] and will therefore fail to compile if used as one.
 ///
@@ -59,7 +54,7 @@ impl BlockingSleeper for StdSleeper {
     }
 }
 
-/// The no_std implementation of `StdSleeper`.
+/// A no_std blocking sleeper
 #[cfg(feature = "embassy-sleep")]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct EmbassySleeper;
