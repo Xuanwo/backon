@@ -102,7 +102,7 @@ impl Sleeper for GlooTimersSleep {
 pub struct EmbassySleeper;
 
 #[cfg(feature = "embassy-sleep")]
-impl Sleeper for EmbassySleep {
+impl Sleeper for EmbassySleeper {
     type Sleep = embassy_time::Timer;
 
     fn sleep(&self, dur: Duration) -> Self::Sleep {
