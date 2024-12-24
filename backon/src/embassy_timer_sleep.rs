@@ -1,4 +1,4 @@
-use crate::{blocking_sleep::MaybeBlockingSleeper, BlockingSleeper, Sleeper};
+use crate::{BlockingSleeper, Sleeper};
 use core::time::Duration;
 
 /// A no_std async sleeper based on the embassy framework (https://embassy.dev)
@@ -13,9 +13,6 @@ impl Sleeper for EmbassySleeper {
     }
 }
 
-/// The default async sleeper for no_std environments
-pub type DefaultSleeper = EmbassySleeper;
-
 /// A no_std blocking sleeper based on the embassy framework (https://embassy.dev)
 #[derive(Clone, Copy, Debug, Default)]
 pub struct EmbassyBlockingSleeper;
@@ -25,8 +22,3 @@ impl BlockingSleeper for EmbassySleeper {
         embassy_time::block_for(embassy_time::Duration::from_millis(dur.as_millis() as u64));
     }
 }
-
-impl MaybeBlockingSleeper for EmbassyBlockingSleeper {}
-
-/// The default blocking sleeper for no_std environments
-pub type DefaultBlockingSleeper = EmbassyBlockingSleeper;
