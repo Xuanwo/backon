@@ -13,10 +13,6 @@ impl Sleeper for EmbassySleeper {
     }
 }
 
-/// A no_std blocking sleeper based on the embassy framework (https://embassy.dev)
-#[derive(Clone, Copy, Debug, Default)]
-pub struct EmbassyBlockingSleeper;
-
 impl BlockingSleeper for EmbassySleeper {
     fn sleep(&self, dur: Duration) {
         embassy_time::block_for(embassy_time::Duration::from_millis(dur.as_millis() as u64));

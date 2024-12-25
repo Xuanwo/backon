@@ -188,8 +188,6 @@ pub use blocking_sleep::StdSleeper;
 #[cfg(feature = "embassy-sleep")]
 mod embassy_timer_sleep;
 #[cfg(feature = "embassy-sleep")]
-pub use embassy_timer_sleep::EmbassyBlockingSleeper;
-#[cfg(feature = "embassy-sleep")]
 pub use embassy_timer_sleep::EmbassySleeper;
 
 #[cfg(docsrs)]
