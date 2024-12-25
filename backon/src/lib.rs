@@ -41,11 +41,12 @@
 //! environments, they are gated under their own features, which are enabled
 //! by default:
 //!
-//! |      `Sleeper`      | feature            | Environment |  Asynchronous |
-//! |---------------------|--------------------|-------------|---------------|
-//! | [`TokioSleeper`]    | tokio-sleep        | non-wasm32  |  Yes          |
-//! | [`GlooTimersSleep`] | gloo-timers-sleep  |   wasm32    |  Yes          |
-//! | [`StdSleeper`]      | std-blocking-sleep |    std      |  No           |
+//! |      `Sleeper`       | feature            | Environment |  Asynchronous |
+//! |----------------------|--------------------|-------------|---------------|
+//! | [`TokioSleeper`]     | tokio-sleep        | non-wasm32  |  Yes          |
+//! | [`GlooTimersSleep`]  | gloo-timers-sleep  |   wasm32    |  Yes          |
+//! | [`FutureTimerSleep`] | future-timer-sleep |   both      |  Yes          |
+//! | [`StdSleeper`]       | std-blocking-sleep |    std      |  No           |
 //!
 //! ## Custom Sleeper
 //!
