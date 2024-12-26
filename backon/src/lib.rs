@@ -45,6 +45,7 @@
 //! |---------------------|--------------------|-------------|---------------|
 //! | [`TokioSleeper`]    | tokio-sleep        | non-wasm32  |  Yes          |
 //! | [`GlooTimersSleep`] | gloo-timers-sleep  |   wasm32    |  Yes          |
+//! | [`EmbassySleep`]    | embassy-sleep      |   no_std    |  Yes          |
 //! | [`StdSleeper`]      | std-blocking-sleep |    std      |  No           |
 //!
 //! ## Custom Sleeper
@@ -183,6 +184,11 @@ pub use blocking_sleep::BlockingSleeper;
 pub use blocking_sleep::DefaultBlockingSleeper;
 #[cfg(feature = "std-blocking-sleep")]
 pub use blocking_sleep::StdSleeper;
+
+#[cfg(feature = "embassy-sleep")]
+mod embassy_timer_sleep;
+#[cfg(feature = "embassy-sleep")]
+pub use embassy_timer_sleep::EmbassySleeper;
 
 #[cfg(docsrs)]
 pub mod docs;
