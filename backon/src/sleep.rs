@@ -36,11 +36,7 @@ impl<F: Fn(Duration) -> Fut + 'static, Fut: Future<Output = ()>> Sleeper for F {
 /// The default implementation of `Sleeper` when no features are enabled.
 ///
 /// It will fail to compile if a containing [`Retry`][crate::Retry] is `.await`ed without calling [`Retry::sleep`][crate::Retry::sleep] to provide a valid sleeper.
-#[cfg(all(
-    not(feature = "tokio-sleep"),
-    not(feature = "gloo-timers-sleep"),
-    not(feature = "futures-timer-sleep")
-))]
+#[cfg(all(not(feature = "tokio-sleep"), not(feature = "gloo-timers-sleep"),))]
 pub type DefaultSleeper = PleaseEnableAFeatureOrProvideACustomSleeper;
 /// The default implementation of `Sleeper` while feature `tokio-sleep` enabled.
 ///
@@ -52,15 +48,6 @@ pub type DefaultSleeper = TokioSleeper;
 /// It uses `gloo_timers::sleep::sleep`.
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 pub type DefaultSleeper = GlooTimersSleep;
-/// The default implementation of `Sleeper` while only the feature `futures-timer-sleep` is enabled.
-///
-/// It uses `futures_timer::Delay`.
-#[cfg(all(
-    not(feature = "tokio-sleep"),
-    not(feature = "gloo-timers-sleep"),
-    feature = "futures-timer-sleep"
-))]
-pub type DefaultSleeper = FuturesTimerSleep;
 
 /// A placeholder type that does not implement [`Sleeper`] and will therefore fail to compile if used as one.
 ///
