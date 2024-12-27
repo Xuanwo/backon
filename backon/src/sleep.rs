@@ -78,6 +78,24 @@ impl Sleeper for TokioSleeper {
     }
 }
 
+/// The implementation of `Sleeper` that uses `futures_timer::Delay`.
+///
+/// This implementation is based on
+/// the [`futures-timer`](https://docs.rs/futures-timer/latest/futures_timer/) crate.
+/// It is async runtime agnostic and will also work in WASM environments.
+#[cfg(feature = "futures-timer-sleep")]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct FuturesTimerSleep;
+
+#[cfg(feature = "futures-timer-sleep")]
+impl Sleeper for FuturesTimerSleep {
+    type Sleep = futures_timer::Delay;
+
+    fn sleep(&self, dur: Duration) -> Self::Sleep {
+        futures_timer::Delay::new(dur)
+    }
+}
+
 /// The default implementation of `Sleeper` utilizes `gloo_timers::future::sleep`.
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 #[derive(Clone, Copy, Debug, Default)]
