@@ -41,6 +41,13 @@ pub struct ConstantBuilder {
 
 impl Default for ConstantBuilder {
     fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ConstantBuilder {
+    /// Create a new `ConstantBuilder` with default values.
+    pub const fn new() -> Self {
         Self {
             delay: Duration::from_secs(1),
             max_times: Some(3),
@@ -48,17 +55,15 @@ impl Default for ConstantBuilder {
             seed: None,
         }
     }
-}
 
-impl ConstantBuilder {
     /// Set the delay for the backoff.
-    pub fn with_delay(mut self, delay: Duration) -> Self {
+    pub const fn with_delay(mut self, delay: Duration) -> Self {
         self.delay = delay;
         self
     }
 
     /// Set the maximum number of attempts to be made.
-    pub fn with_max_times(mut self, max_times: usize) -> Self {
+    pub const fn with_max_times(mut self, max_times: usize) -> Self {
         self.max_times = Some(max_times);
         self
     }
@@ -66,7 +71,7 @@ impl ConstantBuilder {
     /// Enable jitter for the backoff.
     ///
     /// Jitter is a random value added to the delay to prevent a thundering herd problem.
-    pub fn with_jitter(mut self) -> Self {
+    pub const fn with_jitter(mut self) -> Self {
         self.jitter = true;
         self
     }
@@ -82,7 +87,7 @@ impl ConstantBuilder {
     /// The backoff will not stop by itself.
     ///
     /// _The backoff could stop reaching `usize::MAX` attempts but this is **unrealistic**._
-    pub fn without_max_times(mut self) -> Self {
+    pub const fn without_max_times(mut self) -> Self {
         self.max_times = None;
         self
     }
@@ -159,13 +164,16 @@ impl Iterator for ConstantBackoff {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use core::time::Duration;
 
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
-    use crate::BackoffBuilder;
-    use crate::ConstantBuilder;
+    const TEST_BUILDER: ConstantBuilder = ConstantBuilder::new()
+        .with_delay(Duration::from_secs(2))
+        .with_max_times(5)
+        .with_jitter();
 
     #[test]
     fn test_constant_default() {
@@ -213,5 +221,14 @@ mod tests {
         for _ in 0..10_000 {
             assert_eq!(Some(Duration::from_secs(1)), it.next());
         }
+    }
+
+    // allow assertions on constants because they are not optimized out by unit tests
+    #[allow(clippy::assertions_on_constants)]
+    #[test]
+    fn test_constant_const_builder() {
+        assert_eq!(TEST_BUILDER.delay, Duration::from_secs(2));
+        assert_eq!(TEST_BUILDER.max_times, Some(5));
+        assert!(TEST_BUILDER.jitter);
     }
 }
