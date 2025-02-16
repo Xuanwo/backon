@@ -16,14 +16,6 @@ pub trait BackoffBuilder: Send + Sync + Unpin {
     fn build(self) -> Self::Backoff;
 }
 
-impl<B: Backoff> BackoffBuilder for B {
-    type Backoff = B;
-
-    fn build(self) -> Self::Backoff {
-        self
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -35,7 +27,7 @@ mod tests {
 
     #[test]
     fn test_backoff_builder() {
-        test_fn_builder([Duration::from_secs(1)].into_iter());
+        // We should only test with proper builders
 
         // Just for test if user can keep using &XxxBuilder.
         #[allow(clippy::needless_borrows_for_generic_args)]
