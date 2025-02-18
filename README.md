@@ -80,6 +80,9 @@ fn main() -> Result<()> {
 }
 ```
 
+The `retry()` function accepts either a `BackoffBuilder` from the existing backoff variants (`ConstantBuilder`, `Exponentialbuilder` or `Fibonaccibuilder`) as well as any object that implements the [`Backoff`](https://docs.rs/backon/latest/backon/trait.Backoff.html) trait. You can therefore easily implement your own implementation of a custom backoff function.
+
+
 ## Contributing
 
 Check out the [CONTRIBUTING.md](./CONTRIBUTING.md) guide for more details on getting started with contributing to this
