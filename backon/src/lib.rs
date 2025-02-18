@@ -21,7 +21,7 @@
 //!
 //! # Backoff
 //!
-//! Retry in BackON requires a backoff strategy. BackON will accept a [`BackoffBuilder`] which will generate a new [`Backoff`] for each retry.
+//! Retry in BackON requires a backoff strategy. BackON will accept a [`BackoffBuilder`] which will generate a new [`Backoff`] for each retry. It also accepts any object that implements [`Backoff`]. You can therefore easily implement your own custom backoff strategy.
 //!
 //! BackON provides several backoff implementations with reasonable defaults:
 //!
