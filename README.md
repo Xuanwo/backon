@@ -5,7 +5,7 @@
 [Latest Version]: https://img.shields.io/crates/v/backon.svg
 [crates.io]: https://crates.io/crates/backon
 
-<img src="./.github/assets/logo.jpeg" alt="BackON" width="38.2%"/>
+<img src="https://raw.githubusercontent.com/Xuanwo/backon/main/.github/assets/logo.jpeg" alt="BackON" width="38.2%"/>
 
 Make **retry** like a built-in feature provided by Rust.
 
