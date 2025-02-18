@@ -46,6 +46,13 @@ pub struct ExponentialBuilder {
 
 impl Default for ExponentialBuilder {
     fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ExponentialBuilder {
+    /// Create a new `ExponentialBuilder` with default values.
+    pub const fn new() -> Self {
         Self {
             jitter: false,
             factor: 2.0,
@@ -55,14 +62,12 @@ impl Default for ExponentialBuilder {
             seed: None,
         }
     }
-}
 
-impl ExponentialBuilder {
     /// Enable jitter for the backoff.
     ///
     /// When jitter is enabled, [`ExponentialBackoff`] will add a random jitter within `(0, min_delay)`
     /// to the current delay.
-    pub fn with_jitter(mut self) -> Self {
+    pub const fn with_jitter(mut self) -> Self {
         self.jitter = true;
         self
     }
@@ -75,18 +80,15 @@ impl ExponentialBuilder {
 
     /// Set the factor for the backoff.
     ///
-    /// # Panics
-    ///
-    /// This function will panic if the input factor is less than `1.0`.
-    pub fn with_factor(mut self, factor: f32) -> Self {
-        debug_assert!(factor >= 1.0, "invalid factor that lower than 1");
-
+    /// Note: Having a factor less than `1.0` does not make any sense as it would create a
+    /// smaller negative backoff.
+    pub const fn with_factor(mut self, factor: f32) -> Self {
         self.factor = factor;
         self
     }
 
     /// Set the minimum delay for the backoff.
-    pub fn with_min_delay(mut self, min_delay: Duration) -> Self {
+    pub const fn with_min_delay(mut self, min_delay: Duration) -> Self {
         self.min_delay = min_delay;
         self
     }
@@ -94,7 +96,7 @@ impl ExponentialBuilder {
     /// Set the maximum delay for the backoff.
     ///
     /// The delay will not increase if the current delay exceeds the maximum delay.
-    pub fn with_max_delay(mut self, max_delay: Duration) -> Self {
+    pub const fn with_max_delay(mut self, max_delay: Duration) -> Self {
         self.max_delay = Some(max_delay);
         self
     }
@@ -104,7 +106,7 @@ impl ExponentialBuilder {
     /// The delay will keep increasing.
     ///
     /// _The delay will saturate at `Duration::MAX` which is an **unrealistic** delay._
-    pub fn without_max_delay(mut self) -> Self {
+    pub const fn without_max_delay(mut self) -> Self {
         self.max_delay = None;
         self
     }
@@ -112,7 +114,7 @@ impl ExponentialBuilder {
     /// Set the maximum number of attempts for the current backoff.
     ///
     /// The backoff will stop if the maximum number of attempts is reached.
-    pub fn with_max_times(mut self, max_times: usize) -> Self {
+    pub const fn with_max_times(mut self, max_times: usize) -> Self {
         self.max_times = Some(max_times);
         self
     }
@@ -122,7 +124,7 @@ impl ExponentialBuilder {
     /// The backoff will not stop by itself.
     ///
     /// _The backoff could stop reaching `usize::MAX` attempts but this is **unrealistic**._
-    pub fn without_max_times(mut self) -> Self {
+    pub const fn without_max_times(mut self) -> Self {
         self.max_times = None;
         self
     }
@@ -234,6 +236,13 @@ mod tests {
 
     use crate::BackoffBuilder;
     use crate::ExponentialBuilder;
+
+    const TEST_BUILDER: ExponentialBuilder = ExponentialBuilder::new()
+        .with_jitter()
+        .with_factor(1.5)
+        .with_min_delay(Duration::from_secs(2))
+        .with_max_delay(Duration::from_secs(30))
+        .with_max_times(5);
 
     #[test]
     fn test_exponential_default() {
@@ -388,5 +397,16 @@ mod tests {
 
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
         assert_eq!(None, exp.next());
+    }
+
+    // allow assertions on constants because they are not optimized out by unit tests
+    #[allow(clippy::assertions_on_constants)]
+    #[test]
+    fn test_exponential_const_builder() {
+        assert!(TEST_BUILDER.jitter);
+        assert_eq!(TEST_BUILDER.factor, 1.5);
+        assert_eq!(TEST_BUILDER.min_delay, Duration::from_secs(2));
+        assert_eq!(TEST_BUILDER.max_delay, Some(Duration::from_secs(30)));
+        assert_eq!(TEST_BUILDER.max_times, Some(5));
     }
 }
