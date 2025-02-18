@@ -80,12 +80,9 @@ impl ExponentialBuilder {
 
     /// Set the factor for the backoff.
     ///
-    /// # Panics
-    ///
-    /// This function will panic if the input factor is less than `1.0`.
+    /// Note: Having a factor less than `1.0` does not make any sense as it would create a
+    /// smaller negative backoff.
     pub const fn with_factor(mut self, factor: f32) -> Self {
-        debug_assert!(factor >= 1.0, "invalid factor that lower than 1");
-
         self.factor = factor;
         self
     }
