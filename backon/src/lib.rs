@@ -1,3 +1,5 @@
+#![feature(unboxed_closures)]
+#![feature(async_fn_traits)]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/Xuanwo/backon/main/.github/assets/logo.jpeg"
 )]
@@ -166,6 +168,8 @@ pub use retry::Retryable;
 mod retry_with_context;
 pub use retry_with_context::RetryWithContext;
 pub use retry_with_context::RetryableWithContext;
+
+mod async_closure_retry;
 
 mod sleep;
 pub use sleep::DefaultSleeper;
