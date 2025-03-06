@@ -264,7 +264,7 @@ where
                 State::Idle => {
                     let fut = unsafe {
                         // Safety: This is safe because we only this reference in this loop and will drop it after the loop.
-                        (&mut *(&mut this.future_fn as *mut FutureFn)).async_call_mut(())
+                        (&mut *(&mut this.future_fn as *mut FutureFn))()
                     };
                     this.state = State::Polling(fut);
                     continue;
