@@ -62,7 +62,7 @@ impl FibonacciBuilder {
 
     /// Set the jitter for the backoff.
     ///
-    /// When jitter is enabled, FibonacciBackoff will add a random jitter between `(0, min_delay)` to the delay.
+    /// When jitter is enabled, FibonacciBackoff will add a random jitter between `(0, current_delay)` to the delay.
     pub const fn with_jitter(mut self) -> Self {
         self.jitter = true;
         self
@@ -187,7 +187,7 @@ impl Iterator for FibonacciBackoff {
 
                 // If jitter is enabled, add random jitter based on min delay.
                 if self.jitter {
-                    next += self.min_delay.mul_f32(self.rng.f32());
+                    next += next.mul_f32(self.rng.f32());
                 }
 
                 Some(next)
