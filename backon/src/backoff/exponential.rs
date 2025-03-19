@@ -65,7 +65,7 @@ impl ExponentialBuilder {
 
     /// Enable jitter for the backoff.
     ///
-    /// When jitter is enabled, [`ExponentialBackoff`] will add a random jitter within `(0, min_delay)`
+    /// When jitter is enabled, [`ExponentialBackoff`] will add a random jitter within `(0, current_delay)`
     /// to the current delay.
     pub const fn with_jitter(mut self) -> Self {
         self.jitter = true;
@@ -216,7 +216,7 @@ impl Iterator for ExponentialBackoff {
         };
         // If jitter is enabled, add random jitter based on min delay.
         if self.jitter {
-            tmp_cur = tmp_cur.saturating_add(self.min_delay.mul_f32(self.rng.f32()));
+            tmp_cur = tmp_cur.saturating_add(tmp_cur.mul_f32(self.rng.f32()));
         }
         Some(tmp_cur)
     }
