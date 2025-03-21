@@ -249,7 +249,10 @@ impl Iterator for ExponentialBackoff {
             return None;
         }
 
-        self.cumulative_delay = self.cumulative_delay.saturating_add(tmp_cur);
+        if self.total_delay.is_some() {
+            self.cumulative_delay = self.cumulative_delay.saturating_add(tmp_cur);
+        }
+
         self.current_delay = Some(current_delay);
 
         Some(tmp_cur)
