@@ -41,6 +41,7 @@ pub struct ExponentialBuilder {
     min_delay: Duration,
     max_delay: Option<Duration>,
     max_times: Option<usize>,
+    total_delay: Option<Duration>,
     seed: Option<u64>,
 }
 
@@ -59,6 +60,7 @@ impl ExponentialBuilder {
             min_delay: Duration::from_secs(1),
             max_delay: Some(Duration::from_secs(60)),
             max_times: Some(3),
+            total_delay: None,
             seed: None,
         }
     }
@@ -128,6 +130,21 @@ impl ExponentialBuilder {
         self.max_times = None;
         self
     }
+
+    /// Set the total delay for the backoff.
+    ///
+    /// The backoff will stop yielding sleep durations once the cumulative sleep time
+    /// plus the next sleep duration would exceed `total_delay`.
+    pub const fn with_total_delay(mut self, total_delay: Duration) -> Self {
+        self.total_delay = Some(total_delay);
+        self
+    }
+
+    /// Set no total delay for the backoff.
+    pub const fn without_total_delay(mut self) -> Self {
+        self.total_delay = None;
+        self
+    }
 }
 
 impl BackoffBuilder for ExponentialBuilder {
@@ -154,6 +171,8 @@ impl BackoffBuilder for ExponentialBuilder {
 
             current_delay: None,
             attempts: 0,
+            cumulative_delay: Duration::ZERO,
+            total_delay: self.total_delay,
         }
     }
 }
@@ -178,8 +197,10 @@ pub struct ExponentialBackoff {
     min_delay: Duration,
     max_delay: Option<Duration>,
     max_times: Option<usize>,
+    total_delay: Option<Duration>,
 
     current_delay: Option<Duration>,
+    cumulative_delay: Duration,
     attempts: usize,
 }
 
@@ -195,7 +216,6 @@ impl Iterator for ExponentialBackoff {
         let mut tmp_cur = match self.current_delay {
             None => {
                 // If current_delay is None, it's must be the first time to retry.
-                self.current_delay = Some(self.min_delay);
                 self.min_delay
             }
             Some(mut cur) => {
@@ -210,14 +230,28 @@ impl Iterator for ExponentialBackoff {
                 } else {
                     cur = saturating_mul(cur, self.factor);
                 }
-                self.current_delay = Some(cur);
                 cur
             }
         };
+
+        let current_delay = tmp_cur;
         // If jitter is enabled, add random jitter based on min delay.
         if self.jitter {
             tmp_cur = tmp_cur.saturating_add(tmp_cur.mul_f32(self.rng.f32()));
         }
+
+        // Check if adding the current delay would exceed the total delay limit.
+        let total_delay_check = self
+            .total_delay
+            .map_or(true, |total| self.cumulative_delay + tmp_cur <= total);
+
+        if !total_delay_check {
+            return None;
+        }
+
+        self.cumulative_delay = self.cumulative_delay.saturating_add(tmp_cur);
+        self.current_delay = Some(current_delay);
+
         Some(tmp_cur)
     }
 }
@@ -296,6 +330,21 @@ mod tests {
     }
 
     #[test]
+    fn test_exponential_total_delay() {
+        let mut exp = ExponentialBuilder::default()
+            .with_min_delay(Duration::from_secs(1))
+            .with_factor(1.0)
+            .with_total_delay(Duration::from_secs(3))
+            .with_max_times(5)
+            .build();
+
+        assert_eq!(Some(Duration::from_secs(1)), exp.next());
+        assert_eq!(Some(Duration::from_secs(1)), exp.next());
+        assert_eq!(Some(Duration::from_secs(1)), exp.next());
+        assert_eq!(None, exp.next());
+    }
+
+    #[test]
     fn test_exponential_no_max_times_with_default() {
         let mut exp = ExponentialBuilder::default()
             .with_min_delay(Duration::from_secs(1))
@@ -347,6 +396,7 @@ mod tests {
             min_delay: Duration::from_secs(1),
             max_delay: None,
             max_times: None,
+            total_delay: None,
         }
         .build();
 
@@ -365,6 +415,7 @@ mod tests {
             min_delay: Duration::from_secs(10_000_000_000),
             max_delay: None,
             max_times: Some(2),
+            total_delay: None,
         }
         .build();
         let v = exp.next().expect("value must valid");
@@ -383,6 +434,7 @@ mod tests {
             min_delay: Duration::from_secs(10_000_000_000),
             max_delay: Some(Duration::from_secs(60_000_000_000)),
             max_times: Some(3),
+            total_delay: None,
         }
         .build();
         assert_eq!(Some(Duration::from_secs(10_000_000_000)), exp.next());
