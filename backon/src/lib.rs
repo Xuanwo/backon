@@ -160,6 +160,7 @@ mod backoff;
 pub use backoff::*;
 
 mod retry;
+pub use retry::BorrowError;
 pub use retry::Retry;
 pub use retry::Retryable;
 

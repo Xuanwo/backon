@@ -46,6 +46,7 @@ gloo-timers = { version = "0.3", optional = true }
 anyhow = "1"
 reqwest = "0.12"
 spin = "0.9.8"
+futures = "0.3.31"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 tokio = { version = "1", features = [
