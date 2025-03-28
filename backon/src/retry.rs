@@ -502,7 +502,7 @@ mod unfold_test {
     #[cfg(not(target_arch = "wasm32"))]
     use tokio::test;
 
-    use crate::{ConstantBackoff, ConstantBuilder, ExponentialBuilder, Retryable};
+    use crate::{ConstantBuilder, Retryable};
 
     async fn wrap_less_than(
         value: usize,
