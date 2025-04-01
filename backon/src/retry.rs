@@ -381,6 +381,56 @@ mod default_sleeper_tests {
         assert_eq!(*error_times.lock().await, 1);
     }
 
+    #[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
+    #[test]
+    async fn test_retry_with_after_timeout_sleep_duration() {
+        let error_times = Mutex::new(0);
+
+        let f = || async {
+            let mut x = error_times.lock().await;
+            *x += 1;
+
+            if *x == 1 {
+                // If this is the first time we're being called, return an error indicating that we
+                // should retry in 10ms.
+                Err::<(), anyhow::Error>(anyhow::anyhow!("retry after 10ms"))
+            } else {
+                // Otherwise return an error to not try again.
+                Err::<(), anyhow::Error>(anyhow::anyhow!("not retryable"))
+            }
+        };
+
+        // Let's use a `ConstantBackoff` with a really long timeout. This way we can be certain
+        // that the override in `ShouldRetry::AfterTimeout` is being used.
+        let backoff = crate::ConstantBuilder::default().with_delay(Duration::from_secs(10));
+        let future = f
+            .retry(backoff)
+            // Only retry If error message is `retry after 10ms` and override the sleep time.
+            .when(|e| {
+                if e.to_string() == "retry after 10ms" {
+                    ShouldRetry::AfterTimeout(Duration::from_millis(10))
+                } else {
+                    ShouldRetry::No
+                }
+            });
+
+        // Let us package the future into a tokio::time::timeout, this ensures that we abort the test if
+        // it ever attemmpts to use the sleep time from the `ConstantBackoff`.
+        let result = tokio::time::timeout(Duration::from_millis(100), future)
+            .await
+            .expect(
+                "The retryable future should not have elapsed, our \
+            shorter retry timeout should have been used",
+            );
+
+        assert_eq!("not retryable", result.unwrap_err().to_string());
+        assert_eq!(
+            *error_times.lock().await,
+            2,
+            "The future should have been called twice"
+        );
+    }
+
     #[test]
     async fn test_retry_with_retryable_error() {
         let error_times = Mutex::new(0);
