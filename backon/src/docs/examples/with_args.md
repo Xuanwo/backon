@@ -15,7 +15,7 @@ It's a pity that rust doesn't allow us to implement `Retryable` for async functi
  async fn main() -> Result<()> {
      let content = (|| async { fetch("https://www.rust-lang.org").await })
          .retry(ExponentialBuilder::default())
-         .when(|e| e.to_string() == "retryable")
+         .when(|e| (e.to_string() == "retryable").into())
          .await?;
 
      println!("fetch succeeded: {}", content);

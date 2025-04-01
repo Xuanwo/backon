@@ -27,7 +27,7 @@ This is a bit more complex since we need to capture the receiver in the closure 
      .retry(ExponentialBuilder::default())
      // Passing context in.
      .context(test)
-     .when(|e| e.to_string() == "retryable")
+     .when(|e| (e.to_string() == "retryable").into())
      .await;
 
      println!("fetch succeeded: {}", result.unwrap());

@@ -19,7 +19,7 @@ Retry an async function which takes `&self` as receiver.
      let test = Test;
      let content = (|| async { test.fetch("https://www.rust-lang.org").await })
          .retry(ExponentialBuilder::default())
-         .when(|e| e.to_string() == "retryable")
+         .when(|e| (e.to_string() == "retryable").into())
          .await?;
 
      println!("fetch succeeded: {}", content);

@@ -13,7 +13,7 @@ async fn fetch() -> Result<String> {
 async fn main() -> Result<()> {
     let content = fetch
         .retry(ExponentialBuilder::default())
-        .when(|e| e.to_string() == "retryable")
+        .when(|e| (e.to_string() == "retryable").into())
         .await?;
     println!("fetch succeeded: {}", content);
     Ok(())

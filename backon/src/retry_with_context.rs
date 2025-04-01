@@ -212,7 +212,7 @@ where
     /// async fn main() -> Result<()> {
     ///     let content = fetch
     ///         .retry(ExponentialBuilder::default())
-    ///         .when(|e| e.to_string() == "EOF")
+    ///         .when(|e| (e.to_string() == "EOF").into())
     ///         .await?;
     ///     println!("fetch succeeded: {}", content);
     ///

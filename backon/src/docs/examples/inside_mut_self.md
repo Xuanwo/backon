@@ -15,7 +15,7 @@ Retry an async function inside `&mut self` functions.
      async fn run(&mut self) -> Result<String> {
          let content = (|| async { self.fetch("https://www.rust-lang.org").await })
              .retry(ExponentialBuilder::default())
-             .when(|e| e.to_string() == "retryable")
+             .when(|e| (e.to_string() == "retryable").into())
              .await?;
          Ok(content)
      }

@@ -9,6 +9,7 @@ use crate::backoff::BackoffBuilder;
 use crate::sleep::MaybeSleeper;
 use crate::Backoff;
 use crate::DefaultSleeper;
+use crate::ShouldRetry;
 use crate::Sleeper;
 
 /// Retryable will add retry support for functions that produce futures with results.
@@ -69,7 +70,7 @@ pub struct Retry<
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
     SF: MaybeSleeper = DefaultSleeper,
-    RF = fn(&E) -> bool,
+    RF = fn(&E) -> ShouldRetry,
     NF = fn(&E, Duration),
 > {
     backoff: B,
@@ -91,7 +92,7 @@ where
     fn new(future_fn: FutureFn, backoff: B) -> Self {
         Retry {
             backoff,
-            retryable: |_: &E| true,
+            retryable: |_: &E| ShouldRetry::Yes,
             notify: |_: &E, _: Duration| {},
             future_fn,
             sleep_fn: DefaultSleeper::default(),
@@ -106,7 +107,7 @@ where
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
     SF: MaybeSleeper,
-    RF: FnMut(&E) -> bool,
+    RF: FnMut(&E) -> ShouldRetry,
     NF: FnMut(&E, Duration),
 {
     /// Set the sleeper for retrying.
@@ -160,6 +161,7 @@ where
     /// use anyhow::Result;
     /// use backon::ExponentialBuilder;
     /// use backon::Retryable;
+    /// use backon::ShouldRetry;
     ///
     /// async fn fetch() -> Result<String> {
     ///     Ok(reqwest::get("https://www.rust-lang.org")
@@ -172,14 +174,14 @@ where
     /// async fn main() -> Result<()> {
     ///     let content = fetch
     ///         .retry(ExponentialBuilder::default())
-    ///         .when(|e| e.to_string() == "EOF")
+    ///         .when(|e| if  e.to_string() == "EOF" { ShouldRetry::Yes } else { ShouldRetry::No })
     ///         .await?;
     ///     println!("fetch succeeded: {}", content);
     ///
     ///     Ok(())
     /// }
     /// ```
-    pub fn when<RN: FnMut(&E) -> bool>(
+    pub fn when<RN: FnMut(&E) -> ShouldRetry>(
         self,
         retryable: RN,
     ) -> Retry<B, T, E, Fut, FutureFn, SF, RN, NF> {
@@ -258,7 +260,7 @@ where
     Fut: Future<Output = Result<T, E>>,
     FutureFn: FnMut() -> Fut,
     SF: Sleeper,
-    RF: FnMut(&E) -> bool,
+    RF: FnMut(&E) -> ShouldRetry,
     NF: FnMut(&E, Duration),
 {
     type Output = Result<T, E>;
@@ -288,10 +290,13 @@ where
                         Ok(v) => return Poll::Ready(Ok(v)),
                         Err(err) => {
                             // If input error is not retryable, return error directly.
-                            if !(this.retryable)(&err) {
-                                return Poll::Ready(Err(err));
-                            }
-                            match this.backoff.next() {
+                            let timeout = match (this.retryable)(&err) {
+                                ShouldRetry::No => return Poll::Ready(Err(err)),
+                                ShouldRetry::Yes => this.backoff.next(),
+                                ShouldRetry::AfterTimeout(duration) => Some(duration),
+                            };
+
+                            match timeout {
                                 None => return Poll::Ready(Err(err)),
                                 Some(dur) => {
                                     (this.notify)(&err, dur);
@@ -366,7 +371,7 @@ mod default_sleeper_tests {
         let result = f
             .retry(backoff)
             // Only retry If error message is `retryable`
-            .when(|e| e.to_string() == "retryable")
+            .when(|e| (e.to_string() == "retryable").into())
             .await;
 
         assert!(result.is_err());
@@ -390,7 +395,7 @@ mod default_sleeper_tests {
         let result = f
             .retry(backoff)
             // Only retry If error message is `retryable`
-            .when(|e| e.to_string() == "retryable")
+            .when(|e| (e.to_string() == "retryable").into())
             .await;
 
         assert!(result.is_err());
@@ -412,7 +417,7 @@ mod default_sleeper_tests {
             .retry(backoff)
             .when(|_| {
                 calls_retryable.push(());
-                true
+                ShouldRetry::Yes
             })
             .notify(|_, _| {
                 calls_notify.push(());

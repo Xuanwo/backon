@@ -92,6 +92,7 @@
 //! use anyhow::Result;
 //! use backon::ExponentialBuilder;
 //! use backon::Retryable;
+//! use backon::ShouldRetry;
 //! use core::time::Duration;
 //!
 //! async fn fetch() -> Result<String> {
@@ -106,7 +107,7 @@
 //!         // Sleep implementation, default to tokio::time::sleep if `tokio-sleep` has been enabled.
 //!         .sleep(tokio::time::sleep)
 //!         // When to retry
-//!         .when(|e| e.to_string() == "EOF")
+//!         .when(|e| if e.to_string() == "EOF" { ShouldRetry::Yes } else { ShouldRetry::No })
 //!         // Notify when retrying
 //!         .notify(|err: &anyhow::Error, dur: Duration| {
 //!             println!("retrying {:?} after {:?}", err, dur);
@@ -157,6 +158,8 @@
 extern crate std;
 
 mod backoff;
+use core::time::Duration;
+
 pub use backoff::*;
 
 mod retry;
@@ -191,6 +194,26 @@ pub use blocking_sleep::StdSleeper;
 mod embassy_timer_sleep;
 #[cfg(feature = "embassy-sleep")]
 pub use embassy_timer_sleep::EmbassySleeper;
+
+/// Represents a decision on whether and how to retry an operation.
+pub enum ShouldRetry {
+    /// Retry the operation using the chosen backoff strategy.
+    Yes,
+    /// Do not retry the operation.
+    No,
+    /// Retry the operation after a specific timeout, bypassing the default strategy.
+    AfterTimeout(Duration),
+}
+
+impl From<bool> for ShouldRetry {
+    fn from(value: bool) -> Self {
+        if value {
+            ShouldRetry::Yes
+        } else {
+            ShouldRetry::No
+        }
+    }
+}
 
 #[cfg(docsrs)]
 pub mod docs;
