@@ -164,11 +164,12 @@ impl Iterator for ConstantBackoff {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use core::time::Duration;
 
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
+
+    use super::*;
 
     const TEST_BUILDER: ConstantBuilder = ConstantBuilder::new()
         .with_delay(Duration::from_secs(2))

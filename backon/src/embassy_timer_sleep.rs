@@ -1,5 +1,7 @@
-use crate::{BlockingSleeper, Sleeper};
 use core::time::Duration;
+
+use crate::BlockingSleeper;
+use crate::Sleeper;
 
 /// A no_std async sleeper based on the embassy framework (https://embassy.dev)
 #[derive(Clone, Copy, Debug, Default)]

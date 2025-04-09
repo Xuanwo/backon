@@ -1,7 +1,6 @@
-use core::{
-    future::{Future, Ready},
-    time::Duration,
-};
+use core::future::Future;
+use core::future::Ready;
+use core::time::Duration;
 
 /// A sleeper is used to generate a future that completes after a specified duration.
 pub trait Sleeper: 'static {
