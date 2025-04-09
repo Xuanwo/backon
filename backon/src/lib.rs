@@ -48,7 +48,6 @@
 //! | [`FutureTimerSleep`] | future-timer-sleep |wasm/non-wasm|  Yes          |
 //! | [`EmbassySleep`]     | embassy-sleep      |   no_std    |  Yes          |
 //! | [`StdSleeper`]       | std-blocking-sleep |    std      |  No           |
-
 //!
 //! ## Custom Sleeper
 //!
@@ -145,6 +144,64 @@
 //!         })
 //!         .call()?;
 //!     println!("fetch succeeded: {}", content);
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ## Retry an async function with context
+//!
+//! Sometimes users can meet the problem that the async function is needs to take `FnMut`:
+//!
+//! ```shell
+//! error: captured variable cannot escape `FnMut` closure body
+//!    --> src/retry.rs:404:27
+//!     |
+//! 400 |         let mut test = Test;
+//!     |             -------- variable defined here
+//! ...
+//! 404 |         let result = { || async { test.hello().await } }
+//!     |                         - ^^^^^^^^----^^^^^^^^^^^^^^^^
+//!     |                         | |       |
+//!     |                         | |       variable captured here
+//!     |                         | returns an `async` block that contains a reference to a captured variable, which then escapes the closure body
+//!     |                         inferred to be a `FnMut` closure
+//!     |
+//!     = note: `FnMut` closures only have access to their captured variables while they are executing...
+//!     = note: ...therefore, they cannot allow references to captured variables to escape
+//! ```
+//!
+//! `RetryableWithContext` is designed for this, it allows you to pass a context
+//! to the retry function, and return it back after the retry is done.
+//!
+//! ```no_run
+//! use anyhow::anyhow;
+//! use anyhow::Result;
+//! use backon::ExponentialBuilder;
+//! use backon::RetryableWithContext;
+//!
+//! struct Test;
+//!
+//! impl Test {
+//!     async fn hello(&mut self) -> Result<usize> {
+//!         Err(anyhow!("not retryable"))
+//!     }
+//! }
+//!
+//! #[tokio::main(flavor = "current_thread")]
+//! async fn main() -> Result<()> {
+//!     let mut test = Test;
+//!
+//!     // (Test, Result<usize>)
+//!     let (_, result) = {
+//!         |mut v: Test| async {
+//!             let res = v.hello().await;
+//!             (v, res)
+//!         }
+//!     }
+//!     .retry(ExponentialBuilder::default())
+//!     .context(test)
+//!     .await;
 //!
 //!     Ok(())
 //! }
