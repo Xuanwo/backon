@@ -71,6 +71,7 @@ pub struct Retry<
     SF: MaybeSleeper = DefaultSleeper,
     RF = fn(&E) -> bool,
     NF = fn(&E, Duration),
+    AF = fn(&E, Option<Duration>) -> Option<Duration>,
 > {
     backoff: B,
     future_fn: FutureFn,
@@ -78,6 +79,7 @@ pub struct Retry<
     retryable_fn: RF,
     notify_fn: NF,
     sleep_fn: SF,
+    adjust_fn: AF,
 
     state: State<T, E, Fut, SF::Sleep>,
 }
@@ -96,6 +98,7 @@ where
 
             retryable_fn: |_: &E| true,
             notify_fn: |_: &E, _: Duration| {},
+            adjust_fn: |_: &E, dur: Option<Duration>| dur,
             sleep_fn: DefaultSleeper::default(),
 
             state: State::Idle,
@@ -103,7 +106,7 @@ where
     }
 }
 
-impl<B, T, E, Fut, FutureFn, SF, RF, NF> Retry<B, T, E, Fut, FutureFn, SF, RF, NF>
+impl<B, T, E, Fut, FutureFn, SF, RF, NF, AF> Retry<B, T, E, Fut, FutureFn, SF, RF, NF, AF>
 where
     B: Backoff,
     Fut: Future<Output = Result<T, E>>,
@@ -111,6 +114,7 @@ where
     SF: MaybeSleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
+    AF: FnMut(&E, Option<Duration>) -> Option<Duration>,
 {
     /// Set the sleeper for retrying.
     ///
@@ -119,10 +123,11 @@ where
     /// If not specified, we use the [`DefaultSleeper`].
     ///
     /// ```no_run
+    /// use std::future::ready;
+    ///
     /// use anyhow::Result;
     /// use backon::ExponentialBuilder;
     /// use backon::Retryable;
-    /// use std::future::ready;
     ///
     /// async fn fetch() -> Result<String> {
     ///     Ok(reqwest::get("https://www.rust-lang.org")
@@ -142,13 +147,14 @@ where
     ///     Ok(())
     /// }
     /// ```
-    pub fn sleep<SN: Sleeper>(self, sleep_fn: SN) -> Retry<B, T, E, Fut, FutureFn, SN, RF, NF> {
+    pub fn sleep<SN: Sleeper>(self, sleep_fn: SN) -> Retry<B, T, E, Fut, FutureFn, SN, RF, NF, AF> {
         Retry {
             backoff: self.backoff,
             retryable_fn: self.retryable_fn,
             notify_fn: self.notify_fn,
             future_fn: self.future_fn,
             sleep_fn,
+            adjust_fn: self.adjust_fn,
             state: State::Idle,
         }
     }
@@ -185,13 +191,14 @@ where
     pub fn when<RN: FnMut(&E) -> bool>(
         self,
         retryable: RN,
-    ) -> Retry<B, T, E, Fut, FutureFn, SF, RN, NF> {
+    ) -> Retry<B, T, E, Fut, FutureFn, SF, RN, NF, AF> {
         Retry {
             backoff: self.backoff,
             retryable_fn: retryable,
             notify_fn: self.notify_fn,
             future_fn: self.future_fn,
             sleep_fn: self.sleep_fn,
+            adjust_fn: self.adjust_fn,
             state: self.state,
         }
     }
@@ -234,13 +241,102 @@ where
     pub fn notify<NN: FnMut(&E, Duration)>(
         self,
         notify: NN,
-    ) -> Retry<B, T, E, Fut, FutureFn, SF, RF, NN> {
+    ) -> Retry<B, T, E, Fut, FutureFn, SF, RF, NN, AF> {
         Retry {
             backoff: self.backoff,
             retryable_fn: self.retryable_fn,
             notify_fn: notify,
             sleep_fn: self.sleep_fn,
             future_fn: self.future_fn,
+            adjust_fn: self.adjust_fn,
+            state: self.state,
+        }
+    }
+
+    /// Sets the function to adjust the backoff duration for retry attempts.
+    ///
+    /// When a retry occurs, the provided function will be called with the error and the proposed backoff duration, allowing you to modify the final duration used.
+    ///
+    /// If the function returns `None`, it indicates that no further retries should be made, and the error will be returned regardless of the backoff duration provided by the input.
+    ///
+    /// If no `adjust` function is specified, the original backoff duration from the input will be used without modification.
+    ///
+    /// `adjust` can be used to implement dynamic backoff strategies, such as adjust backoff values from the http `Retry-After` headers.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use core::time::Duration;
+    /// use std::error::Error;
+    /// use std::fmt::Display;
+    /// use std::fmt::Formatter;
+    ///
+    /// use anyhow::Result;
+    /// use backon::ExponentialBuilder;
+    /// use backon::Retryable;
+    /// use reqwest::header::HeaderMap;
+    /// use reqwest::StatusCode;
+    ///
+    /// #[derive(Debug)]
+    /// struct HttpError {
+    ///     headers: HeaderMap,
+    /// }
+    ///
+    /// impl Display for HttpError {
+    ///     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    ///         write!(f, "http error")
+    ///     }
+    /// }
+    ///
+    /// impl Error for HttpError {}
+    ///
+    /// async fn fetch() -> Result<String> {
+    ///     let resp = reqwest::get("https://www.rust-lang.org").await?;
+    ///     if resp.status() != StatusCode::OK {
+    ///         let source = HttpError {
+    ///             headers: resp.headers().clone(),
+    ///         };
+    ///         return Err(anyhow::Error::new(source));
+    ///     }
+    ///     Ok(resp.text().await?)
+    /// }
+    ///
+    /// #[tokio::main(flavor = "current_thread")]
+    /// async fn main() -> Result<()> {
+    ///     let content = fetch
+    ///         .retry(ExponentialBuilder::default())
+    ///         .adjust(|err, dur| {
+    ///             match err.downcast_ref::<HttpError>() {
+    ///                 Some(v) => {
+    ///                     if let Some(retry_after) = v.headers.get("Retry-After") {
+    ///                         // Parse the Retry-After header and adjust the backoff duration
+    ///                         let retry_after = retry_after.to_str().unwrap_or("0");
+    ///                         let retry_after = retry_after.parse::<u64>().unwrap_or(0);
+    ///                         Some(Duration::from_secs(retry_after))
+    ///                     } else {
+    ///                         dur
+    ///                     }
+    ///                 }
+    ///                 None => dur,
+    ///             }
+    ///         })
+    ///         .await?;
+    ///     println!("fetch succeeded: {}", content);
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn adjust<NAF: FnMut(&E, Option<Duration>) -> Option<Duration>>(
+        self,
+        adjust: NAF,
+    ) -> Retry<B, T, E, Fut, FutureFn, SF, RF, NF, NAF> {
+        Retry {
+            backoff: self.backoff,
+            retryable_fn: self.retryable_fn,
+            notify_fn: self.notify_fn,
+            sleep_fn: self.sleep_fn,
+            future_fn: self.future_fn,
+            adjust_fn: adjust,
             state: self.state,
         }
     }
@@ -255,7 +351,8 @@ enum State<T, E, Fut: Future<Output = Result<T, E>>, SleepFut: Future<Output = (
     Sleeping(SleepFut),
 }
 
-impl<B, T, E, Fut, FutureFn, SF, RF, NF> Future for Retry<B, T, E, Fut, FutureFn, SF, RF, NF>
+impl<B, T, E, Fut, FutureFn, SF, RF, NF, AF> Future
+    for Retry<B, T, E, Fut, FutureFn, SF, RF, NF, AF>
 where
     B: Backoff,
     Fut: Future<Output = Result<T, E>>,
@@ -263,6 +360,7 @@ where
     SF: Sleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
+    AF: FnMut(&E, Option<Duration>) -> Option<Duration>,
 {
     type Output = Result<T, E>;
 
@@ -294,7 +392,8 @@ where
                             if !(this.retryable_fn)(&err) {
                                 return Poll::Ready(Err(err));
                             }
-                            match this.backoff.next() {
+                            let adjusted_backoff = (this.adjust_fn)(&err, this.backoff.next());
+                            match adjusted_backoff {
                                 None => return Poll::Ready(Err(err)),
                                 Some(dur) => {
                                     (this.notify_fn)(&err, dur);
@@ -330,13 +429,12 @@ mod default_sleeper_tests {
     use alloc::vec;
     use alloc::vec::Vec;
     use core::time::Duration;
+
     use tokio::sync::Mutex;
-
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::wasm_bindgen_test as test;
-
     #[cfg(not(target_arch = "wasm32"))]
     use tokio::test;
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
     use super::*;
     use crate::ExponentialBuilder;
@@ -404,6 +502,31 @@ mod default_sleeper_tests {
     }
 
     #[test]
+    async fn test_retry_with_adjust() {
+        let error_times = std::sync::Mutex::new(0);
+
+        let f = || async { Err::<(), anyhow::Error>(anyhow::anyhow!("retryable")) };
+
+        let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_millis(1));
+        let result = f
+            .retry(backoff)
+            // Only retry If error message is `retryable`
+            .when(|e| e.to_string() == "retryable")
+            .adjust(|_, dur| {
+                let mut x = error_times.lock().unwrap();
+                *x += 1;
+                dur
+            })
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!("retryable", result.unwrap_err().to_string());
+        // `f` always returns error "retryable", so it should be executed
+        // 4 times (retry 3 times).
+        assert_eq!(*error_times.lock().unwrap(), 4);
+    }
+
+    #[test]
     async fn test_fn_mut_when_and_notify() {
         let mut calls_retryable: Vec<()> = vec![];
         let mut calls_notify: Vec<()> = vec![];
@@ -436,13 +559,13 @@ mod custom_sleeper_tests {
     extern crate alloc;
 
     use alloc::string::ToString;
-    use core::{future::ready, time::Duration};
-
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::wasm_bindgen_test as test;
+    use core::future::ready;
+    use core::time::Duration;
 
     #[cfg(not(target_arch = "wasm32"))]
     use tokio::test;
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
     use super::*;
     use crate::ExponentialBuilder;
