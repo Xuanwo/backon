@@ -135,8 +135,8 @@ impl ExponentialBuilder {
     ///
     /// The backoff will stop yielding sleep durations once the cumulative sleep time
     /// plus the next sleep duration would exceed `total_delay`.
-    pub const fn with_total_delay(mut self, total_delay: Duration) -> Self {
-        self.total_delay = Some(total_delay);
+    pub const fn with_total_delay(mut self, total_delay: Option<Duration>) -> Self {
+        self.total_delay = total_delay;
         self
     }
 
@@ -337,7 +337,7 @@ mod tests {
         let mut exp = ExponentialBuilder::default()
             .with_min_delay(Duration::from_secs(1))
             .with_factor(1.0)
-            .with_total_delay(Duration::from_secs(3))
+            .with_total_delay(Some(Duration::from_secs(3)))
             .with_max_times(5)
             .build();
 
