@@ -59,6 +59,7 @@
 //!
 //! ```
 //! use std::time::Duration;
+//!
 //! use backon::Sleeper;
 //!
 //! /// A dummy `Sleeper` impl that prints then becomes ready!
@@ -176,10 +177,12 @@ pub use sleep::Sleeper;
 pub use sleep::TokioSleeper;
 
 mod blocking_retry;
-pub use blocking_retry::{BlockingRetry, BlockingRetryable};
+pub use blocking_retry::BlockingRetry;
+pub use blocking_retry::BlockingRetryable;
 
 mod blocking_retry_with_context;
-pub use blocking_retry_with_context::{BlockingRetryWithContext, BlockingRetryableWithContext};
+pub use blocking_retry_with_context::BlockingRetryWithContext;
+pub use blocking_retry_with_context::BlockingRetryableWithContext;
 
 mod blocking_sleep;
 pub use blocking_sleep::BlockingSleeper;

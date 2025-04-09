@@ -217,11 +217,12 @@ impl Iterator for FibonacciBackoff {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use core::time::Duration;
 
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
+
+    use super::*;
 
     const TEST_BUILDER: FibonacciBuilder = FibonacciBuilder::new()
         .with_jitter()

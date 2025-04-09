@@ -367,15 +367,15 @@ mod tests {
     extern crate alloc;
 
     use alloc::string::ToString;
-    use anyhow::{anyhow, Result};
     use core::time::Duration;
+
+    use anyhow::anyhow;
+    use anyhow::Result;
     use tokio::sync::Mutex;
-
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::wasm_bindgen_test as test;
-
     #[cfg(not(target_arch = "wasm32"))]
     use tokio::test;
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
     use super::*;
     use crate::ExponentialBuilder;
