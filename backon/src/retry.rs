@@ -73,9 +73,10 @@ pub struct Retry<
     NF = fn(&E, Duration),
 > {
     backoff: B,
-    retryable: RF,
-    notify: NF,
     future_fn: FutureFn,
+
+    retryable_fn: RF,
+    notify_fn: NF,
     sleep_fn: SF,
 
     state: State<T, E, Fut, SF::Sleep>,
@@ -91,10 +92,12 @@ where
     fn new(future_fn: FutureFn, backoff: B) -> Self {
         Retry {
             backoff,
-            retryable: |_: &E| true,
-            notify: |_: &E, _: Duration| {},
             future_fn,
+
+            retryable_fn: |_: &E| true,
+            notify_fn: |_: &E, _: Duration| {},
             sleep_fn: DefaultSleeper::default(),
+
             state: State::Idle,
         }
     }
@@ -142,8 +145,8 @@ where
     pub fn sleep<SN: Sleeper>(self, sleep_fn: SN) -> Retry<B, T, E, Fut, FutureFn, SN, RF, NF> {
         Retry {
             backoff: self.backoff,
-            retryable: self.retryable,
-            notify: self.notify,
+            retryable_fn: self.retryable_fn,
+            notify_fn: self.notify_fn,
             future_fn: self.future_fn,
             sleep_fn,
             state: State::Idle,
@@ -185,8 +188,8 @@ where
     ) -> Retry<B, T, E, Fut, FutureFn, SF, RN, NF> {
         Retry {
             backoff: self.backoff,
-            retryable,
-            notify: self.notify,
+            retryable_fn: retryable,
+            notify_fn: self.notify_fn,
             future_fn: self.future_fn,
             sleep_fn: self.sleep_fn,
             state: self.state,
@@ -234,8 +237,8 @@ where
     ) -> Retry<B, T, E, Fut, FutureFn, SF, RF, NN> {
         Retry {
             backoff: self.backoff,
-            retryable: self.retryable,
-            notify,
+            retryable_fn: self.retryable_fn,
+            notify_fn: notify,
             sleep_fn: self.sleep_fn,
             future_fn: self.future_fn,
             state: self.state,
@@ -288,13 +291,13 @@ where
                         Ok(v) => return Poll::Ready(Ok(v)),
                         Err(err) => {
                             // If input error is not retryable, return error directly.
-                            if !(this.retryable)(&err) {
+                            if !(this.retryable_fn)(&err) {
                                 return Poll::Ready(Err(err));
                             }
                             match this.backoff.next() {
                                 None => return Poll::Ready(Err(err)),
                                 Some(dur) => {
-                                    (this.notify)(&err, dur);
+                                    (this.notify_fn)(&err, dur);
                                     this.state = State::Sleeping(this.sleep_fn.sleep(dur));
                                     continue;
                                 }
