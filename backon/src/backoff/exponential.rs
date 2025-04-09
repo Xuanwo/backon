@@ -139,12 +139,6 @@ impl ExponentialBuilder {
         self.total_delay = total_delay;
         self
     }
-
-    /// Set no total delay for the backoff.
-    pub const fn without_total_delay(mut self) -> Self {
-        self.total_delay = None;
-        self
-    }
 }
 
 impl BackoffBuilder for ExponentialBuilder {
