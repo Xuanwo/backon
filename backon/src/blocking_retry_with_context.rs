@@ -2,7 +2,9 @@ use core::time::Duration;
 
 use crate::backoff::BackoffBuilder;
 use crate::blocking_sleep::MaybeBlockingSleeper;
-use crate::{Backoff, BlockingSleeper, DefaultBlockingSleeper};
+use crate::Backoff;
+use crate::BlockingSleeper;
+use crate::DefaultBlockingSleeper;
 
 /// BlockingRetryableWithContext adds retry support for blocking functions.
 pub trait BlockingRetryableWithContext<
@@ -184,13 +186,15 @@ where
 mod tests {
     extern crate alloc;
 
-    use super::*;
-    use crate::ExponentialBuilder;
     use alloc::string::ToString;
+    use core::time::Duration;
+
     use anyhow::anyhow;
     use anyhow::Result;
-    use core::time::Duration;
     use spin::Mutex;
+
+    use super::*;
+    use crate::ExponentialBuilder;
 
     struct Test;
 
