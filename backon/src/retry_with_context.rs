@@ -145,7 +145,7 @@ where
     B: Backoff,
     Fut: Future<Output = (Ctx, Result<T, E>)>,
     FutureFn: FnMut(Ctx) -> Fut,
-    SF: Sleeper,
+    SF: MaybeSleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
 {
