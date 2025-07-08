@@ -225,6 +225,9 @@ mod retry_with_context;
 pub use retry_with_context::RetryWithContext;
 pub use retry_with_context::RetryableWithContext;
 
+mod retry_with_result;
+pub use self::retry_with_result::RetryWithResult;
+
 mod sleep;
 pub use sleep::DefaultSleeper;
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
