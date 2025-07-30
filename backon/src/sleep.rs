@@ -84,10 +84,10 @@ impl Sleeper for TokioSleeper {
 /// It is async runtime agnostic and will also work in WASM environments.
 #[cfg(feature = "futures-timer-sleep")]
 #[derive(Clone, Copy, Debug, Default)]
-pub struct FuturesTimerSleep;
+pub struct FuturesTimerSleeper;
 
 #[cfg(feature = "futures-timer-sleep")]
-impl Sleeper for FuturesTimerSleep {
+impl Sleeper for FuturesTimerSleeper {
     type Sleep = futures_timer::Delay;
 
     fn sleep(&self, dur: Duration) -> Self::Sleep {
