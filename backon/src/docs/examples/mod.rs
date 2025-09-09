@@ -26,3 +26,6 @@ pub mod with_specific_error {}
 
 #[doc = include_str!("retry_after.md")]
 pub mod retry_after {}
+
+#[doc = include_str!("budget_based.md")]
+pub mod budget_based {}
