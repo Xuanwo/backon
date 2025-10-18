@@ -1,4 +1,5 @@
 use core::future::Future;
+use core::ops::ControlFlow;
 use core::pin::Pin;
 use core::task::Context;
 use core::task::Poll;
@@ -9,6 +10,10 @@ use crate::Backoff;
 use crate::DefaultSleeper;
 use crate::Sleeper;
 use crate::backoff::BackoffBuilder;
+use crate::retry_core::RetryConfig;
+use crate::retry_core::always_retry;
+use crate::retry_core::identity_adjust;
+use crate::retry_core::noop_notify;
 use crate::sleep::MaybeSleeper;
 
 /// `RetryableWithContext` adds retry support for functions that produce futures with results
@@ -110,13 +115,10 @@ pub struct RetryWithContext<
     SF: MaybeSleeper = DefaultSleeper,
     RF = fn(&E) -> bool,
     NF = fn(&E, Duration),
+    AF = fn(&E, Option<Duration>) -> Option<Duration>,
 > {
-    backoff: B,
-    retryable: RF,
-    notify: NF,
+    config: RetryConfig<B, SF, RF, NF, AF>,
     future_fn: FutureFn,
-    sleep_fn: SF,
-
     state: State<T, E, Ctx, Fut, SF::Sleep>,
 }
 
@@ -129,18 +131,21 @@ where
     /// Create a new retry.
     fn new(future_fn: FutureFn, backoff: B) -> Self {
         RetryWithContext {
-            backoff,
-            retryable: |_: &E| true,
-            notify: |_: &E, _: Duration| {},
+            config: RetryConfig::new(
+                backoff,
+                DefaultSleeper::default(),
+                always_retry::<E>,
+                noop_notify::<E>,
+                identity_adjust::<E>,
+            ),
             future_fn,
-            sleep_fn: DefaultSleeper::default(),
             state: State::Idle(None),
         }
     }
 }
 
-impl<B, T, E, Ctx, Fut, FutureFn, SF, RF, NF>
-    RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SF, RF, NF>
+impl<B, T, E, Ctx, Fut, FutureFn, SF, RF, NF, AF>
+    RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SF, RF, NF, AF>
 where
     B: Backoff,
     Fut: Future<Output = (Ctx, Result<T, E>)>,
@@ -148,6 +153,7 @@ where
     SF: MaybeSleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
+    AF: FnMut(&E, Option<Duration>) -> Option<Duration>,
 {
     /// Set the sleeper for retrying.
     ///
@@ -157,18 +163,15 @@ where
     pub fn sleep<SN: Sleeper>(
         self,
         sleep_fn: SN,
-    ) -> RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SN, RF, NF> {
+    ) -> RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SN, RF, NF, AF> {
         assert!(
             matches!(self.state, State::Idle(None)),
             "sleep must be set before context"
         );
 
         RetryWithContext {
-            backoff: self.backoff,
-            retryable: self.retryable,
-            notify: self.notify,
+            config: self.config.with_sleep(sleep_fn),
             future_fn: self.future_fn,
-            sleep_fn,
             state: State::Idle(None),
         }
     }
@@ -179,13 +182,10 @@ where
     pub fn context(
         self,
         context: Ctx,
-    ) -> RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SF, RF, NF> {
+    ) -> RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SF, RF, NF, AF> {
         RetryWithContext {
-            backoff: self.backoff,
-            retryable: self.retryable,
-            notify: self.notify,
+            config: self.config,
             future_fn: self.future_fn,
-            sleep_fn: self.sleep_fn,
             state: State::Idle(Some(context)),
         }
     }
@@ -222,13 +222,10 @@ where
     pub fn when<RN: FnMut(&E) -> bool>(
         self,
         retryable: RN,
-    ) -> RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SF, RN, NF> {
+    ) -> RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SF, RN, NF, AF> {
         RetryWithContext {
-            backoff: self.backoff,
-            retryable,
-            notify: self.notify,
+            config: self.config.with_retryable(retryable),
             future_fn: self.future_fn,
-            sleep_fn: self.sleep_fn,
             state: self.state,
         }
     }
@@ -271,13 +268,10 @@ where
     pub fn notify<NN: FnMut(&E, Duration)>(
         self,
         notify: NN,
-    ) -> RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SF, RF, NN> {
+    ) -> RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SF, RF, NN, AF> {
         RetryWithContext {
-            backoff: self.backoff,
-            retryable: self.retryable,
-            notify,
+            config: self.config.with_notify(notify),
             future_fn: self.future_fn,
-            sleep_fn: self.sleep_fn,
             state: self.state,
         }
     }
@@ -290,8 +284,8 @@ enum State<T, E, Ctx, Fut: Future<Output = (Ctx, Result<T, E>)>, SleepFut: Futur
     Sleeping((Option<Ctx>, SleepFut)),
 }
 
-impl<B, T, E, Ctx, Fut, FutureFn, SF, RF, NF> Future
-    for RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SF, RF, NF>
+impl<B, T, E, Ctx, Fut, FutureFn, SF, RF, NF, AF> Future
+    for RetryWithContext<B, T, E, Ctx, Fut, FutureFn, SF, RF, NF, AF>
 where
     B: Backoff,
     Fut: Future<Output = (Ctx, Result<T, E>)>,
@@ -299,6 +293,7 @@ where
     SF: Sleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
+    AF: FnMut(&E, Option<Duration>) -> Option<Duration>,
 {
     type Output = (Ctx, Result<T, E>);
 
@@ -327,21 +322,14 @@ where
                     let (ctx, res) = ready!(fut.as_mut().poll(cx));
                     match res {
                         Ok(v) => return Poll::Ready((ctx, Ok(v))),
-                        Err(err) => {
-                            // If input error is not retryable, return error directly.
-                            if !(this.retryable)(&err) {
-                                return Poll::Ready((ctx, Err(err)));
+                        Err(err) => match this.config.decide(&err) {
+                            ControlFlow::Continue(dur) => {
+                                let sleep = this.config.sleep.sleep(dur);
+                                this.state = State::Sleeping((Some(ctx), sleep));
+                                continue;
                             }
-                            match this.backoff.next() {
-                                None => return Poll::Ready((ctx, Err(err))),
-                                Some(dur) => {
-                                    (this.notify)(&err, dur);
-                                    this.state =
-                                        State::Sleeping((Some(ctx), this.sleep_fn.sleep(dur)));
-                                    continue;
-                                }
-                            }
-                        }
+                            ControlFlow::Break(_) => return Poll::Ready((ctx, Err(err))),
+                        },
                     }
                 }
                 State::Sleeping((ctx, sl)) => {

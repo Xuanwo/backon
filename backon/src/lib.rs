@@ -221,6 +221,8 @@ mod retry;
 pub use retry::Retry;
 pub use retry::Retryable;
 
+mod retry_core;
+
 mod retry_with_context;
 pub use retry_with_context::RetryWithContext;
 pub use retry_with_context::RetryableWithContext;

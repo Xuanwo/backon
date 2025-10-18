@@ -1,3 +1,4 @@
+use core::ops::ControlFlow;
 use core::time::Duration;
 
 use crate::Backoff;
@@ -5,6 +6,10 @@ use crate::BlockingSleeper;
 use crate::DefaultBlockingSleeper;
 use crate::backoff::BackoffBuilder;
 use crate::blocking_sleep::MaybeBlockingSleeper;
+use crate::retry_core::RetryConfig;
+use crate::retry_core::always_retry;
+use crate::retry_core::identity_adjust;
+use crate::retry_core::noop_notify;
 
 /// BlockingRetryable adds retry support for blocking functions.
 ///
@@ -68,12 +73,10 @@ pub struct BlockingRetry<
     SF: MaybeBlockingSleeper = DefaultBlockingSleeper,
     RF = fn(&E) -> bool,
     NF = fn(&E, Duration),
+    AF = fn(&E, Option<Duration>) -> Option<Duration>,
 > {
-    backoff: B,
-    retryable: RF,
-    notify: NF,
+    config: RetryConfig<B, SF, RF, NF, AF>,
     f: F,
-    sleep_fn: SF,
 }
 
 impl<B, T, E, F> BlockingRetry<B, T, E, F>
@@ -84,22 +87,26 @@ where
     /// Create a new retry.
     fn new(f: F, backoff: B) -> Self {
         BlockingRetry {
-            backoff,
-            retryable: |_: &E| true,
-            notify: |_: &E, _: Duration| {},
-            sleep_fn: DefaultBlockingSleeper::default(),
+            config: RetryConfig::new(
+                backoff,
+                DefaultBlockingSleeper::default(),
+                always_retry::<E>,
+                noop_notify::<E>,
+                identity_adjust::<E>,
+            ),
             f,
         }
     }
 }
 
-impl<B, T, E, F, SF, RF, NF> BlockingRetry<B, T, E, F, SF, RF, NF>
+impl<B, T, E, F, SF, RF, NF, AF> BlockingRetry<B, T, E, F, SF, RF, NF, AF>
 where
     B: Backoff,
     F: FnMut() -> Result<T, E>,
     SF: MaybeBlockingSleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
+    AF: FnMut(&E, Option<Duration>) -> Option<Duration>,
 {
     /// Set the sleeper for retrying.
     ///
@@ -128,13 +135,13 @@ where
     ///     Ok(())
     /// }
     /// ```
-    pub fn sleep<SN: BlockingSleeper>(self, sleep_fn: SN) -> BlockingRetry<B, T, E, F, SN, RF, NF> {
+    pub fn sleep<SN: BlockingSleeper>(
+        self,
+        sleep_fn: SN,
+    ) -> BlockingRetry<B, T, E, F, SN, RF, NF, AF> {
         BlockingRetry {
-            backoff: self.backoff,
-            retryable: self.retryable,
-            notify: self.notify,
+            config: self.config.with_sleep(sleep_fn),
             f: self.f,
-            sleep_fn,
         }
     }
 
@@ -166,13 +173,10 @@ where
     pub fn when<RN: FnMut(&E) -> bool>(
         self,
         retryable: RN,
-    ) -> BlockingRetry<B, T, E, F, SF, RN, NF> {
+    ) -> BlockingRetry<B, T, E, F, SF, RN, NF, AF> {
         BlockingRetry {
-            backoff: self.backoff,
-            retryable,
-            notify: self.notify,
+            config: self.config.with_retryable(retryable),
             f: self.f,
-            sleep_fn: self.sleep_fn,
         }
     }
 
@@ -210,24 +214,22 @@ where
     pub fn notify<NN: FnMut(&E, Duration)>(
         self,
         notify: NN,
-    ) -> BlockingRetry<B, T, E, F, SF, RF, NN> {
+    ) -> BlockingRetry<B, T, E, F, SF, RF, NN, AF> {
         BlockingRetry {
-            backoff: self.backoff,
-            retryable: self.retryable,
-            notify,
+            config: self.config.with_notify(notify),
             f: self.f,
-            sleep_fn: self.sleep_fn,
         }
     }
 }
 
-impl<B, T, E, F, SF, RF, NF> BlockingRetry<B, T, E, F, SF, RF, NF>
+impl<B, T, E, F, SF, RF, NF, AF> BlockingRetry<B, T, E, F, SF, RF, NF, AF>
 where
     B: Backoff,
     F: FnMut() -> Result<T, E>,
     SF: BlockingSleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
+    AF: FnMut(&E, Option<Duration>) -> Option<Duration>,
 {
     /// Call the retried function.
     ///
@@ -238,19 +240,12 @@ where
 
             match result {
                 Ok(v) => return Ok(v),
-                Err(err) => {
-                    if !(self.retryable)(&err) {
-                        return Err(err);
+                Err(err) => match self.config.decide(&err) {
+                    ControlFlow::Continue(dur) => {
+                        self.config.sleep.sleep(dur);
                     }
-
-                    match self.backoff.next() {
-                        None => return Err(err),
-                        Some(dur) => {
-                            (self.notify)(&err, dur);
-                            self.sleep_fn.sleep(dur);
-                        }
-                    }
-                }
+                    ControlFlow::Break(_) => return Err(err),
+                },
             }
         }
     }

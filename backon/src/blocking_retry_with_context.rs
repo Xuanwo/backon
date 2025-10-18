@@ -1,3 +1,4 @@
+use core::ops::ControlFlow;
 use core::time::Duration;
 
 use crate::Backoff;
@@ -5,6 +6,10 @@ use crate::BlockingSleeper;
 use crate::DefaultBlockingSleeper;
 use crate::backoff::BackoffBuilder;
 use crate::blocking_sleep::MaybeBlockingSleeper;
+use crate::retry_core::RetryConfig;
+use crate::retry_core::always_retry;
+use crate::retry_core::identity_adjust;
+use crate::retry_core::noop_notify;
 
 /// BlockingRetryableWithContext adds retry support for blocking functions.
 pub trait BlockingRetryableWithContext<
@@ -39,12 +44,10 @@ pub struct BlockingRetryWithContext<
     SF: MaybeBlockingSleeper = DefaultBlockingSleeper,
     RF = fn(&E) -> bool,
     NF = fn(&E, Duration),
+    AF = fn(&E, Option<Duration>) -> Option<Duration>,
 > {
-    backoff: B,
-    retryable: RF,
-    notify: NF,
+    config: RetryConfig<B, SF, RF, NF, AF>,
     f: F,
-    sleep_fn: SF,
     ctx: Option<Ctx>,
 }
 
@@ -56,34 +59,38 @@ where
     /// Create a new retry.
     fn new(f: F, backoff: B) -> Self {
         BlockingRetryWithContext {
-            backoff,
-            retryable: |_: &E| true,
-            notify: |_: &E, _: Duration| {},
-            sleep_fn: DefaultBlockingSleeper::default(),
+            config: RetryConfig::new(
+                backoff,
+                DefaultBlockingSleeper::default(),
+                always_retry::<E>,
+                noop_notify::<E>,
+                identity_adjust::<E>,
+            ),
             f,
             ctx: None,
         }
     }
 }
 
-impl<B, T, E, Ctx, F, SF, RF, NF> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RF, NF>
+impl<B, T, E, Ctx, F, SF, RF, NF, AF> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RF, NF, AF>
 where
     B: Backoff,
     F: FnMut(Ctx) -> (Ctx, Result<T, E>),
     SF: MaybeBlockingSleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
+    AF: FnMut(&E, Option<Duration>) -> Option<Duration>,
 {
     /// Set the context for retrying.
     ///
     /// Context is used to capture ownership manually to prevent lifetime issues.
-    pub fn context(self, context: Ctx) -> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RF, NF> {
+    pub fn context(
+        self,
+        context: Ctx,
+    ) -> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RF, NF, AF> {
         BlockingRetryWithContext {
-            backoff: self.backoff,
-            retryable: self.retryable,
-            notify: self.notify,
+            config: self.config,
             f: self.f,
-            sleep_fn: self.sleep_fn,
             ctx: Some(context),
         }
     }
@@ -96,13 +103,10 @@ where
     pub fn sleep<SN: BlockingSleeper>(
         self,
         sleep_fn: SN,
-    ) -> BlockingRetryWithContext<B, T, E, Ctx, F, SN, RF, NF> {
+    ) -> BlockingRetryWithContext<B, T, E, Ctx, F, SN, RF, NF, AF> {
         BlockingRetryWithContext {
-            backoff: self.backoff,
-            retryable: self.retryable,
-            notify: self.notify,
+            config: self.config.with_sleep(sleep_fn),
             f: self.f,
-            sleep_fn,
             ctx: self.ctx,
         }
     }
@@ -113,13 +117,10 @@ where
     pub fn when<RN: FnMut(&E) -> bool>(
         self,
         retryable: RN,
-    ) -> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RN, NF> {
+    ) -> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RN, NF, AF> {
         BlockingRetryWithContext {
-            backoff: self.backoff,
-            retryable,
-            notify: self.notify,
+            config: self.config.with_retryable(retryable),
             f: self.f,
-            sleep_fn: self.sleep_fn,
             ctx: self.ctx,
         }
     }
@@ -132,25 +133,23 @@ where
     pub fn notify<NN: FnMut(&E, Duration)>(
         self,
         notify: NN,
-    ) -> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RF, NN> {
+    ) -> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RF, NN, AF> {
         BlockingRetryWithContext {
-            backoff: self.backoff,
-            retryable: self.retryable,
-            notify,
+            config: self.config.with_notify(notify),
             f: self.f,
-            sleep_fn: self.sleep_fn,
             ctx: self.ctx,
         }
     }
 }
 
-impl<B, T, E, Ctx, F, SF, RF, NF> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RF, NF>
+impl<B, T, E, Ctx, F, SF, RF, NF, AF> BlockingRetryWithContext<B, T, E, Ctx, F, SF, RF, NF, AF>
 where
     B: Backoff,
     F: FnMut(Ctx) -> (Ctx, Result<T, E>),
     SF: BlockingSleeper,
     RF: FnMut(&E) -> bool,
     NF: FnMut(&E, Duration),
+    AF: FnMut(&E, Option<Duration>) -> Option<Duration>,
 {
     /// Call the retried function.
     ///
@@ -164,19 +163,12 @@ where
 
             match result {
                 Ok(v) => return (ctx, Ok(v)),
-                Err(err) => {
-                    if !(self.retryable)(&err) {
-                        return (ctx, Err(err));
+                Err(err) => match self.config.decide(&err) {
+                    ControlFlow::Continue(dur) => {
+                        self.config.sleep.sleep(dur);
                     }
-
-                    match self.backoff.next() {
-                        None => return (ctx, Err(err)),
-                        Some(dur) => {
-                            (self.notify)(&err, dur);
-                            self.sleep_fn.sleep(dur);
-                        }
-                    }
-                }
+                    ControlFlow::Break(_) => return (ctx, Err(err)),
+                },
             }
         }
     }
