@@ -1,0 +1,19 @@
+[package]
+name = "backon-macros"
+description = "Attribute macro helpers for the backon retry library."
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+repository = "https://github.com/Xuanwo/backon"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.89"
+quote = "1.0.35"
+syn = { version = "2.0.87", features = ["full"] }
+
+[dev-dependencies]
+backon = { path = "../backon" }
+trybuild = "1.0.89"

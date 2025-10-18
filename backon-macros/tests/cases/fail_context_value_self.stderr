@@ -1,0 +1,5 @@
+error: `context = true` does not support methods that take ownership of `self`
+ --> tests/cases/fail_context_value_self.rs:7:13
+  |
+7 |     fn take(self, payload: String) -> Result<String, ()> {
+  |             ^^^^

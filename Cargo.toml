@@ -1,5 +1,5 @@
 [workspace]
-members = ["backon"]
+members = ["backon", "backon-macros"]
 resolver = "2"
 
 [workspace.package]

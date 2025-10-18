@@ -1,0 +1,5 @@
+error: `context = true` requires arguments to bind to identifiers
+ --> tests/cases/fail_context_ident.rs:4:26
+  |
+4 | async fn invalid_pattern((a, b): (i32, i32)) -> Result<(), ()> {
+  |                          ^^^^^^
