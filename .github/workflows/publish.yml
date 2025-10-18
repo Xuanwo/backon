@@ -17,18 +17,18 @@ jobs:
       matrix:
         include:
           - crate: backon
-            manifest: backon/Cargo.toml
             tag_prefix: v
           - crate: backon-macros
-            manifest: backon-macros/Cargo.toml
             tag_prefix: backon-macros-v
-    if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
     steps:
       - uses: actions/checkout@v5
+        if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
       - name: Authenticate with crates.io
+        if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
         uses: rust-lang/crates-io-auth-action@v1
         id: auth
       - name: Publish to crates.io
+        if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
         run: cargo publish -p ${{ matrix.crate }}
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
