@@ -27,7 +27,9 @@ impl<B: Backoff> BackoffBuilder for B {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ConstantBuilder, ExponentialBuilder, FibonacciBuilder};
+    use crate::ConstantBuilder;
+    use crate::ExponentialBuilder;
+    use crate::FibonacciBuilder;
 
     fn test_fn_builder(b: impl BackoffBuilder) {
         let _ = b.build();

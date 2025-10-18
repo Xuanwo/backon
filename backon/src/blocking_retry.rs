@@ -1,8 +1,10 @@
 use core::time::Duration;
 
+use crate::Backoff;
+use crate::BlockingSleeper;
+use crate::DefaultBlockingSleeper;
 use crate::backoff::BackoffBuilder;
 use crate::blocking_sleep::MaybeBlockingSleeper;
-use crate::{Backoff, BlockingSleeper, DefaultBlockingSleeper};
 
 /// BlockingRetryable adds retry support for blocking functions.
 ///
@@ -261,6 +263,7 @@ mod tests {
     use alloc::vec;
     use alloc::vec::Vec;
     use core::time::Duration;
+
     use spin::Mutex;
 
     use super::*;

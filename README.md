@@ -9,15 +9,17 @@
 
 Make **retry** like a built-in feature provided by Rust.
 
-- **Simple**: Just like a built-in feature: `your_fn.retry(ExponentialBuilder::default()).await`.
-- **Flexible**: Supports both blocking and async functions.
-- **Powerful**: Allows control over retry behavior such as [`when`](https://docs.rs/backon/latest/backon/struct.Retry.html#method.when) and [`notify`](https://docs.rs/backon/latest/backon/struct.Retry.html#method.notify).
-- **Customizable**: Supports custom retry strategies like [exponential](https://docs.rs/backon/latest/backon/struct.ExponentialBuilder.html), [constant](https://docs.rs/backon/latest/backon/struct.ConstantBuilder.html), etc.
-- **Adaptable**: Works on all platforms supported by Rust, including both `wasm` and `no-std`.
+- **Simple API**: Native feel: `your_fn.retry(ExponentialBuilder::default()).await`.
+- **Sync & Async**: Supports both blocking and async operations seamlessly.
+- **Precise Control**: Define when to retry and get notified via [`when`](https://docs.rs/backon/latest/backon/struct.Retry.html#method.when) and [`notify`](https://docs.rs/backon/latest/backon/struct.Retry.html#method.notify).
+- **Custom Strategies**: Use built-in backoff strategies (exponential, constant) or define custom ones. Also supports dynamic backoff, such as using the HTTP `Retry-After` header.
+- **Cross-Platform**: Works everywhere Rust does, including `wasm` & `no-std`.
 
 ---
 
 ## Quick Start
+
+For more examples, check out the [examples](https://docs.rs/backon/latest/backon/docs/examples/index.html).
 
 ### Retry an async function.
 

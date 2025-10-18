@@ -2,7 +2,7 @@
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/Xuanwo/backon/main/.github/assets/logo.jpeg"
 )]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 //! [![Build Status]][actions] [![Latest Version]][crates.io] [![](https://img.shields.io/discord/1111711408875393035?logo=discord&label=discord)](https://discord.gg/8ARnvtJePD)
 //!
@@ -42,14 +42,13 @@
 //! environments, they are gated under their own features, which are enabled
 //! by default:
 //!
-//! |      `Sleeper`       | feature            | Environment |  Asynchronous |
-//! |----------------------|--------------------|-------------|---------------|
-//! | [`TokioSleeper`]     | tokio-sleep        | non-wasm32  |  Yes          |
-//! | [`GlooTimersSleep`]  | gloo-timers-sleep  |   wasm32    |  Yes          |
-//! | [`FutureTimerSleep`] | future-timer-sleep |wasm/non-wasm|  Yes          |
-//! | [`EmbassySleep`]     | embassy-sleep      |   no_std    |  Yes          |
-//! | [`StdSleeper`]       | std-blocking-sleep |    std      |  No           |
-
+//! |      `Sleeper`          | feature             | Environment |  Asynchronous |
+//! |-------------------------|---------------------|-------------|---------------|
+//! | [`TokioSleeper`]        | tokio-sleep         | non-wasm32  |  Yes          |
+//! | [`GlooTimersSleep`]     | gloo-timers-sleep   |   wasm32    |  Yes          |
+//! | [`FuturesTimerSleeper`] | futures-timer-sleep |wasm/non-wasm|  Yes          |
+//! | [`EmbassySleep`]        | embassy-sleep       |   no_std    |  Yes          |
+//! | [`StdSleeper`]          | std-blocking-sleep  |    std      |  No           |
 //!
 //! ## Custom Sleeper
 //!
@@ -60,6 +59,7 @@
 //!
 //! ```
 //! use std::time::Duration;
+//!
 //! use backon::Sleeper;
 //!
 //! /// A dummy `Sleeper` impl that prints then becomes ready!
@@ -99,7 +99,7 @@
 //!     Ok("hello, world!".to_string())
 //! }
 //!
-//! #[tokio::main]
+//! #[tokio::main(flavor = "current_thread")]
 //! async fn main() -> Result<()> {
 //!     let content = fetch
 //!         // Retry with exponential backoff
@@ -149,6 +149,64 @@
 //!     Ok(())
 //! }
 //! ```
+//!
+//! ## Retry an async function with context
+//!
+//! Sometimes users can meet the problem that the async function is needs to take `FnMut`:
+//!
+//! ```shell
+//! error: captured variable cannot escape `FnMut` closure body
+//!    --> src/retry.rs:404:27
+//!     |
+//! 400 |         let mut test = Test;
+//!     |             -------- variable defined here
+//! ...
+//! 404 |         let result = { || async { test.hello().await } }
+//!     |                         - ^^^^^^^^----^^^^^^^^^^^^^^^^
+//!     |                         | |       |
+//!     |                         | |       variable captured here
+//!     |                         | returns an `async` block that contains a reference to a captured variable, which then escapes the closure body
+//!     |                         inferred to be a `FnMut` closure
+//!     |
+//!     = note: `FnMut` closures only have access to their captured variables while they are executing...
+//!     = note: ...therefore, they cannot allow references to captured variables to escape
+//! ```
+//!
+//! `RetryableWithContext` is designed for this, it allows you to pass a context
+//! to the retry function, and return it back after the retry is done.
+//!
+//! ```no_run
+//! use anyhow::anyhow;
+//! use anyhow::Result;
+//! use backon::ExponentialBuilder;
+//! use backon::RetryableWithContext;
+//!
+//! struct Test;
+//!
+//! impl Test {
+//!     async fn hello(&mut self) -> Result<usize> {
+//!         Err(anyhow!("not retryable"))
+//!     }
+//! }
+//!
+//! #[tokio::main(flavor = "current_thread")]
+//! async fn main() -> Result<()> {
+//!     let mut test = Test;
+//!
+//!     // (Test, Result<usize>)
+//!     let (_, result) = {
+//!         |mut v: Test| async {
+//!             let res = v.hello().await;
+//!             (v, res)
+//!         }
+//!     }
+//!     .retry(ExponentialBuilder::default())
+//!     .context(test)
+//!     .await;
+//!
+//!     Ok(())
+//! }
+//! ```
 
 #![deny(missing_docs)]
 #![deny(unused_qualifications)]
@@ -172,6 +230,8 @@ mod async_closure_retry;
 
 mod sleep;
 pub use sleep::DefaultSleeper;
+#[cfg(feature = "futures-timer-sleep")]
+pub use sleep::FuturesTimerSleeper;
 #[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
 pub use sleep::GlooTimersSleep;
 pub use sleep::Sleeper;
@@ -179,10 +239,12 @@ pub use sleep::Sleeper;
 pub use sleep::TokioSleeper;
 
 mod blocking_retry;
-pub use blocking_retry::{BlockingRetry, BlockingRetryable};
+pub use blocking_retry::BlockingRetry;
+pub use blocking_retry::BlockingRetryable;
 
 mod blocking_retry_with_context;
-pub use blocking_retry_with_context::{BlockingRetryWithContext, BlockingRetryableWithContext};
+pub use blocking_retry_with_context::BlockingRetryWithContext;
+pub use blocking_retry_with_context::BlockingRetryableWithContext;
 
 mod blocking_sleep;
 pub use blocking_sleep::BlockingSleeper;

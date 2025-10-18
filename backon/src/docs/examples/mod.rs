@@ -23,3 +23,6 @@ pub mod with_self {}
 
 #[doc = include_str!("with_specific_error.md")]
 pub mod with_specific_error {}
+
+#[doc = include_str!("retry_after.md")]
+pub mod retry_after {}
