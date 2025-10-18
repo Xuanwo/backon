@@ -14,7 +14,7 @@ concurrency:
 
 env:
   # Minimum Supported Rust Version for backon
-  BACKON_MSRV: "1.70"
+  BACKON_MSRV: "1.85"
 
 jobs:
   check:

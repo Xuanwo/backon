@@ -1,10 +1,10 @@
 use core::time::Duration;
 
-use crate::backoff::BackoffBuilder;
-use crate::blocking_sleep::MaybeBlockingSleeper;
 use crate::Backoff;
 use crate::BlockingSleeper;
 use crate::DefaultBlockingSleeper;
+use crate::backoff::BackoffBuilder;
+use crate::blocking_sleep::MaybeBlockingSleeper;
 
 /// BlockingRetryable adds retry support for blocking functions.
 ///

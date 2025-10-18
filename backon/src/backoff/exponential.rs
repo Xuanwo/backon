@@ -237,7 +237,7 @@ impl Iterator for ExponentialBackoff {
         // Check if adding the current delay would exceed the total delay limit.
         let total_delay_check = self
             .total_delay
-            .map_or(true, |total| self.cumulative_delay + tmp_cur <= total);
+            .is_none_or(|total| self.cumulative_delay + tmp_cur <= total);
 
         if !total_delay_check {
             return None;
