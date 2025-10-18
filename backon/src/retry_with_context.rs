@@ -1,15 +1,15 @@
 use core::future::Future;
 use core::pin::Pin;
-use core::task::ready;
 use core::task::Context;
 use core::task::Poll;
+use core::task::ready;
 use core::time::Duration;
 
-use crate::backoff::BackoffBuilder;
-use crate::sleep::MaybeSleeper;
 use crate::Backoff;
 use crate::DefaultSleeper;
 use crate::Sleeper;
+use crate::backoff::BackoffBuilder;
+use crate::sleep::MaybeSleeper;
 
 /// `RetryableWithContext` adds retry support for functions that produce futures with results
 /// and context.
@@ -369,8 +369,8 @@ mod tests {
     use alloc::string::ToString;
     use core::time::Duration;
 
-    use anyhow::anyhow;
     use anyhow::Result;
+    use anyhow::anyhow;
     use tokio::sync::Mutex;
     #[cfg(not(target_arch = "wasm32"))]
     use tokio::test;

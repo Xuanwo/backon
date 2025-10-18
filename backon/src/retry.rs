@@ -1,15 +1,15 @@
 use core::future::Future;
 use core::pin::Pin;
-use core::task::ready;
 use core::task::Context;
 use core::task::Poll;
+use core::task::ready;
 use core::time::Duration;
 
-use crate::backoff::BackoffBuilder;
-use crate::sleep::MaybeSleeper;
 use crate::Backoff;
 use crate::DefaultSleeper;
 use crate::Sleeper;
+use crate::backoff::BackoffBuilder;
+use crate::sleep::MaybeSleeper;
 
 /// Retryable will add retry support for functions that produce futures with results.
 ///
