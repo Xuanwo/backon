@@ -309,7 +309,7 @@ fn build_function_body(
 
     if chain_config.adjust.is_some() && !is_async {
         return Err(Error::new(
-            sig.span(),
+            sig.ident.span(),
             "`adjust` is only available for async functions",
         ));
     }
@@ -407,7 +407,7 @@ fn prepare_context(sig: &Signature, include_receiver: bool) -> syn::Result<Conte
                 }
                 _ => {
                     return Err(Error::new(
-                        pat_type.span(),
+                        pat_type.pat.span(),
                         "`context = true` requires arguments to bind to identifiers",
                     ));
                 }
