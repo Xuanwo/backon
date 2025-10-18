@@ -3,7 +3,7 @@ description = "Make retry like a built-in feature provided by Rust."
 documentation = "https://docs.rs/backon"
 name = "backon"
 readme = "../README.md"
-rust-version = "1.70"
+rust-version = "1.85"
 version = "1.5.2"
 
 edition.workspace = true

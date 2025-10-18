@@ -1,10 +1,10 @@
 use core::time::Duration;
 
-use crate::backoff::BackoffBuilder;
-use crate::blocking_sleep::MaybeBlockingSleeper;
 use crate::Backoff;
 use crate::BlockingSleeper;
 use crate::DefaultBlockingSleeper;
+use crate::backoff::BackoffBuilder;
+use crate::blocking_sleep::MaybeBlockingSleeper;
 
 /// BlockingRetryableWithContext adds retry support for blocking functions.
 pub trait BlockingRetryableWithContext<
@@ -189,8 +189,8 @@ mod tests {
     use alloc::string::ToString;
     use core::time::Duration;
 
-    use anyhow::anyhow;
     use anyhow::Result;
+    use anyhow::anyhow;
     use spin::Mutex;
 
     use super::*;

@@ -36,6 +36,7 @@ pub type DefaultBlockingSleeper = StdSleeper;
 ///
 /// Users should enable a feature of this crate that provides a valid [`Sleeper`] implementation when this type appears in compilation errors. Alternatively, a custom [`Sleeper`] implementation should be provided where necessary, such as in [`crate::Retry::sleeper`].
 #[doc(hidden)]
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PleaseEnableAFeatureOrProvideACustomSleeper;
 

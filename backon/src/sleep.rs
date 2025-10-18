@@ -5,7 +5,7 @@ use core::time::Duration;
 /// A sleeper is used to generate a future that completes after a specified duration.
 pub trait Sleeper: 'static {
     /// The future returned by the `sleep` method.
-    type Sleep: Future<Output = ()>;
+    type Sleep: Future;
 
     /// Create a future that completes after a set period.
     fn sleep(&self, dur: Duration) -> Self::Sleep;
@@ -15,7 +15,7 @@ pub trait Sleeper: 'static {
 /// It does not provide actual functionality.
 #[doc(hidden)]
 pub trait MaybeSleeper: 'static {
-    type Sleep: Future<Output = ()>;
+    type Sleep: Future;
 }
 
 /// All `Sleeper` will implement  `MaybeSleeper`, but not vice versa.
@@ -23,8 +23,8 @@ impl<T: Sleeper + ?Sized> MaybeSleeper for T {
     type Sleep = <T as Sleeper>::Sleep;
 }
 
-/// All `Fn(Duration) -> impl Future<Output = ()>` implements `Sleeper`.
-impl<F: Fn(Duration) -> Fut + 'static, Fut: Future<Output = ()>> Sleeper for F {
+/// All `Fn(Duration) -> impl Future` implements `Sleeper`.
+impl<F: Fn(Duration) -> Fut + 'static, Fut: Future> Sleeper for F {
     type Sleep = Fut;
 
     fn sleep(&self, dur: Duration) -> Self::Sleep {
@@ -52,6 +52,7 @@ pub type DefaultSleeper = GlooTimersSleep;
 ///
 /// Users should enable a feature of this crate that provides a valid [`Sleeper`] implementation when this type appears in compilation errors. Alternatively, a custom [`Sleeper`] implementation should be provided where necessary, such as in [`crate::Retry::sleeper`].
 #[doc(hidden)]
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PleaseEnableAFeatureOrProvideACustomSleeper;
 

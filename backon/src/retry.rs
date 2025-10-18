@@ -1,15 +1,15 @@
 use core::future::Future;
 use core::pin::Pin;
-use core::task::ready;
 use core::task::Context;
 use core::task::Poll;
+use core::task::ready;
 use core::time::Duration;
 
-use crate::backoff::BackoffBuilder;
-use crate::sleep::MaybeSleeper;
 use crate::Backoff;
 use crate::DefaultSleeper;
 use crate::Sleeper;
+use crate::backoff::BackoffBuilder;
+use crate::sleep::MaybeSleeper;
 
 /// Retryable will add retry support for functions that produce futures with results.
 ///
@@ -118,7 +118,7 @@ where
 {
     /// Set the sleeper for retrying.
     ///
-    /// The sleeper should implement the [`Sleeper`] trait. The simplest way is to use a closure that returns a `Future<Output=()>`.
+    /// The sleeper should implement the [`Sleeper`] trait. The simplest way is to use a closure that returns a `Future`.
     ///
     /// If not specified, we use the [`DefaultSleeper`].
     ///
@@ -344,7 +344,7 @@ where
 
 /// State maintains internal state of retry.
 #[derive(Default)]
-enum State<T, E, Fut: Future<Output = Result<T, E>>, SleepFut: Future<Output = ()>> {
+enum State<T, E, Fut: Future<Output = Result<T, E>>, SleepFut: Future> {
     #[default]
     Idle,
     Polling(Fut),
