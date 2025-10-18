@@ -1,7 +1,7 @@
 [package]
 name = "backon-macros"
 description = "Attribute macro helpers for the backon retry library."
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 license = "Apache-2.0"
 repository = "https://github.com/Xuanwo/backon"
@@ -17,3 +17,4 @@ syn = { version = "2.0.87", features = ["full"] }
 [dev-dependencies]
 backon = { path = "../backon" }
 trybuild = "1.0.89"
+tokio = { version = "1.40.0", features = ["rt", "macros", "time"] }

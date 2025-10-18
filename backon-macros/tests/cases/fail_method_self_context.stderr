@@ -1,0 +1,5 @@
+error: `context = true` is not supported for methods taking `&self`
+ --> tests/cases/fail_method_self_context.rs:6:24
+  |
+6 |     #[backon(context = true)]
+  |                        ^^^^

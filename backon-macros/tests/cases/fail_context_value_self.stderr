@@ -1,4 +1,4 @@
-error: `context = true` does not support methods that take ownership of `self`
+error: `#[backon]` does not support methods that take ownership of `self`; please fall back to manual `RetryableWithContext` usage
  --> tests/cases/fail_context_value_self.rs:7:13
   |
 7 |     fn take(self, payload: String) -> Result<String, ()> {

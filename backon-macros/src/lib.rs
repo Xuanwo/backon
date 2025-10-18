@@ -1,3 +1,73 @@
+//! Attribute macros that integrate with the `backon` retry library.
+//!
+//! # Overview
+//!
+//! This crate provides the `#[backon]` attribute for free functions and inherent
+//! methods. Annotated items are rewritten so their bodies execute inside the
+//! `backon` retry pipeline, matching the fluent builder style from the runtime
+//! crate without hand-written closures.
+//!
+//! The macro inspects the target signature to decide whether to call
+//! [`Retryable`](backon::Retryable) or [`BlockingRetryable`](backon::BlockingRetryable).
+//! When `context = true` is supplied, it switches to the corresponding `*_WithContext`
+//! traits so the arguments are preserved across retries.
+//!
+//! # Usage
+//!
+//! ```
+//! use std::time::Duration;
+//!
+//! use backon_macros::backon;
+//!
+//! #[derive(Debug)]
+//! enum ExampleError {
+//!     Temporary,
+//!     Fatal,
+//! }
+//!
+//! fn should_retry(err: &ExampleError) -> bool {
+//!     matches!(err, ExampleError::Temporary)
+//! }
+//!
+//! fn log_retry(err: &ExampleError, dur: Duration) {
+//!     println!("retrying after {dur:?}: {err:?}");
+//! }
+//!
+//! #[backon(
+//!     backoff = backon::ExponentialBuilder::default,
+//!     sleep = tokio::time::sleep,
+//!     when = should_retry,
+//!     notify = log_retry
+//! )]
+//! async fn fetch() -> Result<String, ExampleError> {
+//!     Ok("value".to_string())
+//! }
+//!
+//! #[tokio::main(flavor = "current_thread")]
+//! async fn main() -> Result<(), ExampleError> {
+//!     let value = fetch().await?;
+//!     println!("{value}");
+//!     Ok(())
+//! }
+//! ```
+//!
+//! # Parameters
+//!
+//! * `backoff = path` – Builder that creates a backoff strategy. Defaults to
+//!   `backon::ExponentialBuilder::default`.
+//! * `sleep = path` – Sleeper function used for async or blocking retries.
+//! * `when = path` – Predicate that filters retryable errors.
+//! * `notify = path` – Callback invoked before each sleep.
+//! * `adjust = path` – Async-only hook that can override the delay.
+//! * `context = true` – Capture inputs into a context tuple and use the
+//!   `RetryableWithContext` traits.
+//!
+//! # Limitations
+//!
+//! * Methods that take `&mut self` or own `self` are not generated; fallback to
+//!   manual `RetryableWithContext` until support lands.
+//! * Parameters must bind to identifiers; destructuring patterns are rejected.
+//! * `context = true` is unavailable for `&self` methods.
 #![forbid(unsafe_code)]
 
 use proc_macro::TokenStream;
@@ -26,16 +96,7 @@ fn expand_backon(args: TokenStream, input: TokenStream) -> syn::Result<TokenStre
         }
         let original_block = (*item_fn.block).clone();
         let body_tokens = quote!(#original_block);
-        let body_span = original_block.span();
-        let block = build_function_body(
-            &args,
-            &item_fn.sig,
-            body_tokens,
-            body_span,
-            None,
-            false,
-            false,
-        )?;
+        let block = build_function_body(&args, &item_fn.sig, body_tokens, None, false, false)?;
         item_fn.block = Box::new(block);
         return Ok(TokenStream::from(quote!(#item_fn)));
     }
@@ -58,16 +119,7 @@ fn expand_method(args: &BackonArgs, method: ImplItemFn) -> syn::Result<TokenStre
         wrapper.attrs.retain(|attr| !attr.path().is_ident("backon"));
         let original_block = wrapper.block.clone();
         let body_tokens = quote!(#original_block);
-        let body_span = original_block.span();
-        let block = build_function_body(
-            args,
-            &wrapper.sig,
-            body_tokens,
-            body_span,
-            None,
-            false,
-            false,
-        )?;
+        let block = build_function_body(args, &wrapper.sig, body_tokens, None, false, false)?;
         wrapper.block = block;
         return Ok(TokenStream::from(quote!(#wrapper)));
     }
@@ -80,26 +132,45 @@ fn expand_method(args: &BackonArgs, method: ImplItemFn) -> syn::Result<TokenStre
     let mut wrapper = method;
     wrapper.attrs.retain(|attr| !attr.path().is_ident("backon"));
 
-    if let Some(FnArg::Receiver(receiver)) = wrapper.sig.inputs.first() {
-        if receiver.mutability.is_some() {
+    let receiver = match wrapper.sig.inputs.first() {
+        Some(FnArg::Receiver(receiver)) => receiver,
+        _ => {
             return Err(Error::new(
-                receiver.span(),
-                "`#[backon]` does not yet support methods taking `&mut self`; please fall back to manual `RetryableWithContext` usage",
+                wrapper.sig.span(),
+                "failed to determine method receiver",
             ));
         }
+    };
+
+    if receiver.mutability.is_some() {
+        return Err(Error::new(
+            receiver.span(),
+            "`#[backon]` does not yet support methods taking `&mut self`; please fall back to manual `RetryableWithContext` usage",
+        ));
     }
 
-    let context = prepare_context(&wrapper.sig, true)?;
-    let receiver_ident = context
-        .receiver_ident
-        .clone()
-        .ok_or_else(|| Error::new(wrapper.sig.span(), "failed to capture receiver"))?;
+    if receiver.reference.is_none() {
+        return Err(Error::new(
+            receiver.span(),
+            "`#[backon]` does not support methods that take ownership of `self`; please fall back to manual `RetryableWithContext` usage",
+        ));
+    }
+
+    if args.context {
+        let span = args.context_span.unwrap_or_else(|| receiver.span());
+        return Err(Error::new(
+            span,
+            "`context = true` is not supported for methods taking `&self`",
+        ));
+    }
+
     let arg_idents = collect_arg_idents(&wrapper.sig)?;
 
+    let receiver_tokens = quote!(self);
     let helper_args = if arg_idents.is_empty() {
-        quote!(#receiver_ident)
+        quote!(#receiver_tokens)
     } else {
-        quote!(#receiver_ident, #(#arg_idents),*)
+        quote!(#receiver_tokens, #(#arg_idents),*)
     };
 
     let helper_call = if wrapper.sig.asyncness.is_some() {
@@ -109,17 +180,7 @@ fn expand_method(args: &BackonArgs, method: ImplItemFn) -> syn::Result<TokenStre
     };
 
     let body_tokens = quote!({ #helper_call });
-    let body_span = helper.block.span();
-
-    let block = build_function_body(
-        args,
-        &wrapper.sig,
-        body_tokens,
-        body_span,
-        Some(context.clone()),
-        true,
-        true,
-    )?;
+    let block = build_function_body(args, &wrapper.sig, body_tokens, None, false, false)?;
     wrapper.block = block;
 
     Ok(TokenStream::from(quote!(#helper #wrapper)))
@@ -133,6 +194,7 @@ struct BackonArgs {
     notify: Option<Path>,
     adjust: Option<Path>,
     context: bool,
+    context_span: Option<proc_macro2::Span>,
 }
 
 impl Parse for BackonArgs {
@@ -178,6 +240,7 @@ impl Parse for BackonArgs {
                     }
                     let value: LitBool = input.parse()?;
                     args.context = value.value;
+                    args.context_span = Some(value.span());
                 }
                 other => {
                     return Err(Error::new(
@@ -226,24 +289,25 @@ fn build_function_body(
     args: &BackonArgs,
     sig: &Signature,
     body: proc_macro2::TokenStream,
-    body_span: proc_macro2::Span,
     precomputed_context: Option<ContextInfo>,
     force_context: bool,
     include_receiver: bool,
 ) -> syn::Result<syn::Block> {
-    let backoff_path = args
-        .backoff
-        .clone()
-        .unwrap_or_else(|| syn::parse_str("::backon::ExponentialBuilder::default").unwrap());
-
-    let sleep_path = args.sleep.clone();
-    let when_path = args.when.clone();
-    let notify_path = args.notify.clone();
-    let adjust_path = args.adjust.clone();
-
     let is_async = sig.asyncness.is_some();
 
-    if adjust_path.is_some() && !is_async {
+    let chain_config = ChainConfig {
+        is_async,
+        backoff: args
+            .backoff
+            .clone()
+            .unwrap_or_else(|| syn::parse_str("::backon::ExponentialBuilder::default").unwrap()),
+        sleep: args.sleep.clone(),
+        when: args.when.clone(),
+        notify: args.notify.clone(),
+        adjust: args.adjust.clone(),
+    };
+
+    if chain_config.adjust.is_some() && !is_async {
         return Err(Error::new(
             sig.span(),
             "`adjust` is only available for async functions",
@@ -259,30 +323,21 @@ fn build_function_body(
     };
 
     let chain_tokens = if let Some(context) = context_data {
-        build_with_context_chain(
-            is_async,
-            &backoff_path,
-            sleep_path,
-            when_path,
-            notify_path,
-            adjust_path,
-            body,
-            body_span,
-            context,
-        )
+        build_with_context_chain(&chain_config, body.clone(), context)
     } else {
-        build_simple_chain(
-            is_async,
-            &backoff_path,
-            sleep_path,
-            when_path,
-            notify_path,
-            adjust_path,
-            body,
-        )
+        build_simple_chain(&chain_config, body)
     }?;
 
-    Ok(syn::parse2(chain_tokens)?)
+    syn::parse2(chain_tokens)
+}
+
+struct ChainConfig {
+    is_async: bool,
+    backoff: Path,
+    sleep: Option<Path>,
+    when: Option<Path>,
+    notify: Option<Path>,
+    adjust: Option<Path>,
 }
 
 #[derive(Clone)]
@@ -291,7 +346,6 @@ struct ContextInfo {
     initial_expr: proc_macro2::TokenStream,
     return_expr: proc_macro2::TokenStream,
     ty: proc_macro2::TokenStream,
-    receiver_ident: Option<Ident>,
 }
 
 fn prepare_context(sig: &Signature, include_receiver: bool) -> syn::Result<ContextInfo> {
@@ -299,7 +353,6 @@ fn prepare_context(sig: &Signature, include_receiver: bool) -> syn::Result<Conte
     let mut exprs = Vec::new();
     let mut return_exprs = Vec::new();
     let mut types = Vec::new();
-    let mut receiver_ident = None;
     for input in sig.inputs.iter() {
         match input {
             FnArg::Receiver(receiver) => {
@@ -342,7 +395,6 @@ fn prepare_context(sig: &Signature, include_receiver: bool) -> syn::Result<Conte
                 exprs.push(quote!(self));
                 return_exprs.push(quote!(#binding));
                 types.push(ty_tokens);
-                receiver_ident = Some(binding);
             }
             FnArg::Typed(pat_type) => match &*pat_type.pat {
                 Pat::Ident(pat_ident) => {
@@ -392,20 +444,16 @@ fn prepare_context(sig: &Signature, include_receiver: bool) -> syn::Result<Conte
         initial_expr,
         return_expr,
         ty,
-        receiver_ident,
     })
 }
 
 fn build_simple_chain(
-    is_async: bool,
-    backoff_path: &Path,
-    sleep: Option<Path>,
-    when: Option<Path>,
-    notify: Option<Path>,
-    adjust: Option<Path>,
+    config: &ChainConfig,
     body: proc_macro2::TokenStream,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    let mut chain = if is_async {
+    let backoff_path = &config.backoff;
+
+    let mut chain = if config.is_async {
         quote! {
             (|| async move #body)
                 .retry(__backon_builder)
@@ -417,29 +465,29 @@ fn build_simple_chain(
         }
     };
 
-    if let Some(path) = sleep {
+    if let Some(path) = config.sleep.clone() {
         chain = quote!(#chain.sleep(#path));
     }
 
-    if let Some(path) = when {
+    if let Some(path) = config.when.clone() {
         chain = quote!(#chain.when(#path));
     }
 
-    if let Some(path) = notify {
+    if let Some(path) = config.notify.clone() {
         chain = quote!(#chain.notify(#path));
     }
 
-    if let Some(path) = adjust {
+    if let Some(path) = config.adjust.clone() {
         chain = quote!(#chain.adjust(#path));
     }
 
-    let executed = if is_async {
+    let executed = if config.is_async {
         quote!(#chain.await)
     } else {
         quote!(#chain.call())
     };
 
-    let trait_use = if is_async {
+    let trait_use = if config.is_async {
         quote!(
             use ::backon::Retryable as _;
         )
@@ -457,22 +505,17 @@ fn build_simple_chain(
 }
 
 fn build_with_context_chain(
-    is_async: bool,
-    backoff_path: &Path,
-    sleep: Option<Path>,
-    when: Option<Path>,
-    notify: Option<Path>,
-    adjust: Option<Path>,
+    config: &ChainConfig,
     body: proc_macro2::TokenStream,
-    _body_span: proc_macro2::Span,
     context: ContextInfo,
 ) -> syn::Result<proc_macro2::TokenStream> {
+    let backoff_path = &config.backoff;
     let initial_context = &context.initial_expr;
     let return_context = &context.return_expr;
     let context_ty = &context.ty;
     let pattern = &context.pattern;
 
-    let mut chain = if is_async {
+    let mut chain = if config.is_async {
         quote! {
             (|__backon_ctx: #context_ty| async move {
                 let #pattern = __backon_ctx;
@@ -492,23 +535,23 @@ fn build_with_context_chain(
         }
     };
 
-    if let Some(path) = sleep {
+    if let Some(path) = config.sleep.clone() {
         chain = quote!(#chain.sleep(#path));
     }
 
-    if let Some(path) = when {
+    if let Some(path) = config.when.clone() {
         chain = quote!(#chain.when(#path));
     }
 
-    if let Some(path) = notify {
+    if let Some(path) = config.notify.clone() {
         chain = quote!(#chain.notify(#path));
     }
 
-    if let Some(path) = adjust {
+    if let Some(path) = config.adjust.clone() {
         chain = quote!(#chain.adjust(#path));
     }
 
-    let trait_use = if is_async {
+    let trait_use = if config.is_async {
         quote!(
             use ::backon::RetryableWithContext as _;
         )
@@ -518,7 +561,7 @@ fn build_with_context_chain(
         )
     };
 
-    let tail = if is_async {
+    let tail = if config.is_async {
         quote!({
             let (__backon_context, __backon_result) = #chain
                 .context(__backon_initial_context)
