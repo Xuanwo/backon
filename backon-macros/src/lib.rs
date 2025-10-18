@@ -142,16 +142,16 @@ fn expand_method(args: &BackonArgs, method: ImplItemFn) -> syn::Result<TokenStre
         }
     };
 
-    if receiver.mutability.is_some() {
+    if let Some(mutability) = receiver.mutability.as_ref() {
         return Err(Error::new(
-            receiver.span(),
+            mutability.span(),
             "`#[backon]` does not yet support methods taking `&mut self`; please fall back to manual `RetryableWithContext` usage",
         ));
     }
 
     if receiver.reference.is_none() {
         return Err(Error::new(
-            receiver.span(),
+            receiver.self_token.span,
             "`#[backon]` does not support methods that take ownership of `self`; please fall back to manual `RetryableWithContext` usage",
         ));
     }
@@ -362,7 +362,7 @@ fn prepare_context(sig: &Signature, include_receiver: bool) -> syn::Result<Conte
 
                 if receiver.reference.is_none() {
                     return Err(Error::new(
-                        receiver.span(),
+                        receiver.self_token.span,
                         "`context = true` does not support methods that take ownership of `self`",
                     ));
                 }
