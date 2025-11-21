@@ -21,7 +21,7 @@ jobs:
           - crate: backon-macros
             tag_prefix: backon-macros-v
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
       - name: Authenticate with crates.io
         if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
