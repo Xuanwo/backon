@@ -40,7 +40,7 @@ tokio = { version = "1", optional = true }
 futures-timer = { version = "3.0.3", optional = true, features = [
   "gloo-timers",
 ] }
-gloo-timers = { version = "0.3", optional = true }
+gloo-timers = { version = "0.4", optional = true }
 
 [dev-dependencies]
 anyhow = "1"
