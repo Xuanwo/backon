@@ -56,7 +56,7 @@ tokio = { version = "1", features = [
 wasm-bindgen-test = "0.3"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-sqlx = { version = "0.8.0", features = ["runtime-tokio", "sqlite"] }
+sqlx = { version = "0.9.0", features = ["runtime-tokio", "sqlite"] }
 tokio = { version = "1", features = [
   "time",
   "rt",
