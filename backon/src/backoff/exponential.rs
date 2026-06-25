@@ -209,8 +209,11 @@ impl Iterator for ExponentialBackoff {
 
         let mut tmp_cur = match self.current_delay {
             None => {
-                // If current_delay is None, it's must be the first time to retry.
-                self.min_delay
+                // If current_delay is None, this is the first retry.
+                // Start from min_delay, but respect max_delay if configured.
+                self.max_delay
+                    .min(Some(self.min_delay))
+                    .unwrap_or(self.min_delay)
             }
             Some(mut cur) => {
                 // If current delay larger than max delay, we should stop increment anymore.
@@ -233,6 +236,10 @@ impl Iterator for ExponentialBackoff {
         if self.jitter {
             tmp_cur = tmp_cur.saturating_add(tmp_cur.mul_f32(self.rng.f32()));
         }
+
+        // Clamp the computed delay to max_delay if one is configured.
+        // It's important to not exceed max delay.
+        tmp_cur = self.max_delay.min(Some(tmp_cur)).unwrap_or(tmp_cur);
 
         // Check if adding the current delay would exceed the total delay limit.
         let total_delay_check = self
@@ -445,6 +452,50 @@ mod tests {
         let mut exp = ExponentialBuilder::default().with_max_times(1).build();
 
         assert_eq!(Some(Duration::from_secs(1)), exp.next());
+        assert_eq!(None, exp.next());
+    }
+
+    #[test]
+    fn test_exponential_exceeds_max_delay() {
+        const MAX_DELAY: Duration = Duration::from_millis(600);
+
+        let mut exp = ExponentialBuilder::new()
+            .with_max_times(2)
+            .with_jitter()
+            .with_max_delay(MAX_DELAY)
+            .build();
+
+        assert_eq!(
+            Some(MAX_DELAY),
+            exp.next(),
+            "Max delay should be greater than or equal to the next wait time",
+        );
+        assert_eq!(
+            Some(MAX_DELAY),
+            exp.next(),
+            "Max delay should be greater than or equal to the next wait time"
+        );
+        assert_eq!(None, exp.next());
+    }
+
+    #[test]
+    fn test_exponential_min_delay_larger_than_max() {
+        const MAX_DELAY: Duration = Duration::from_millis(500);
+        const MIN_DELAY: Duration = Duration::from_secs(5);
+
+        let mut exp = ExponentialBuilder::new()
+            .with_max_times(2)
+            .with_jitter()
+            .with_max_delay(MAX_DELAY)
+            .with_min_delay(MIN_DELAY)
+            .build();
+
+        assert_eq!(
+            Some(MAX_DELAY),
+            exp.next(),
+            "Max delay should be greater than or equal to the next wait time"
+        );
+        assert_eq!(Some(MAX_DELAY), exp.next());
         assert_eq!(None, exp.next());
     }
 

@@ -97,7 +97,7 @@ fn expand_backon(args: TokenStream, input: TokenStream) -> syn::Result<TokenStre
         let original_block = (*item_fn.block).clone();
         let body_tokens = quote!(#original_block);
         let block = build_function_body(&args, &item_fn.sig, body_tokens, None, false, false)?;
-        item_fn.block = Box::new(block);
+        *item_fn.block = block;
         return Ok(TokenStream::from(quote!(#item_fn)));
     }
 
