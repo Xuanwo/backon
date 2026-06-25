@@ -3,9 +3,3 @@ error: `adjust` is only available for async functions
   |
 8 | fn invalid_blocking() -> Result<(), &'static str> {
   |    ^^^^^^^^^^^^^^^^
-
-error[E0425]: cannot find function `invalid_blocking` in this scope
-  --> tests/cases/fail_adjust_blocking.rs:13:13
-   |
-13 |     let _ = invalid_blocking();
-   |             ^^^^^^^^^^^^^^^^ not found in this scope
