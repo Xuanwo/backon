@@ -24,7 +24,7 @@ default = ["std", "std-blocking-sleep", "tokio-sleep", "gloo-timers-sleep"]
 embassy-sleep = ["embassy-time"]
 futures-timer-sleep = ["futures-timer"]
 gloo-timers-sleep = ["gloo-timers/futures"]
-std = ["fastrand/std"]
+std = ["fastrand/std", "dep:web-time"]
 std-blocking-sleep = []
 tokio-sleep = ["tokio/time"]
 
@@ -41,6 +41,9 @@ futures-timer = { version = "3.0.3", optional = true, features = [
   "gloo-timers",
 ] }
 gloo-timers = { version = "0.3", optional = true }
+
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+web-time = { version = "1", optional = true }
 
 [dev-dependencies]
 anyhow = "1"

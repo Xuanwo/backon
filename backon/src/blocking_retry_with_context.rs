@@ -81,6 +81,19 @@ where
     NF: FnMut(&E, Duration),
     AF: FnMut(&E, Option<Duration>) -> Option<Duration>,
 {
+    /// Set the maximum elapsed time for retry attempts.
+    ///
+    /// Pass `None` to leave the elapsed time unbounded.
+    ///
+    /// The timer starts when [`Self::call`] begins. Once the elapsed time reaches this limit, BackON
+    /// returns the latest error and context instead of scheduling another retry. It does not interrupt
+    /// an attempt or sleep that is already in progress.
+    #[cfg(feature = "std")]
+    pub fn with_max_elapsed_time(mut self, max_elapsed_time: impl Into<Option<Duration>>) -> Self {
+        self.config = self.config.with_max_elapsed_time(max_elapsed_time.into());
+        self
+    }
+
     /// Set the context for retrying.
     ///
     /// Context is used to capture ownership manually to prevent lifetime issues.
@@ -155,6 +168,7 @@ where
     ///
     /// TODO: implement [`FnOnce`] after it stable.
     pub fn call(mut self) -> (Ctx, Result<T, E>) {
+        self.config.start();
         let mut ctx = self.ctx.take().expect("context must be valid");
         loop {
             let (xctx, result) = (self.f)(ctx);
@@ -194,6 +208,24 @@ mod tests {
         fn hello(&mut self) -> Result<usize> {
             Err(anyhow!("not retryable"))
         }
+    }
+
+    #[cfg(feature = "std")]
+    #[test]
+    fn max_elapsed_time_zero_should_return_context_without_retrying() {
+        let attempts = Mutex::new(0);
+
+        let (_ctx, result) = (|ctx| {
+            *attempts.lock() += 1;
+            (ctx, Err::<(), _>(anyhow!("retryable")))
+        })
+        .retry(ExponentialBuilder::default())
+        .with_max_elapsed_time(Duration::ZERO)
+        .context(Test)
+        .call();
+
+        assert!(result.is_err());
+        assert_eq!(*attempts.lock(), 1);
     }
 
     #[test]

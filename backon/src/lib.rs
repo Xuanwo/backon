@@ -211,7 +211,7 @@
 #![deny(unused_qualifications)]
 #![no_std]
 
-#[cfg(feature = "std-blocking-sleep")]
+#[cfg(any(feature = "std", feature = "std-blocking-sleep"))]
 extern crate std;
 
 mod backoff;
