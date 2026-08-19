@@ -117,6 +117,11 @@ impl<B, Sleep, RetryFn, NotifyFn, AdjustFn> RetryConfig<B, Sleep, RetryFn, Notif
         }
     }
 
+    #[cfg(all(test, feature = "std"))]
+    pub(crate) fn timer_started(&self) -> bool {
+        self.timer.started_at.is_some()
+    }
+
     fn has_elapsed(&self) -> bool {
         #[cfg(feature = "std")]
         {
@@ -169,7 +174,7 @@ mod tests {
     use crate::ConstantBuilder;
 
     #[test]
-    fn elapsed_limit_should_stop_before_consuming_backoff() {
+    fn test_elapsed_limit_before_backoff() {
         let backoff = ConstantBuilder::default()
             .with_delay(Duration::from_secs(1))
             .with_max_times(1)
@@ -181,13 +186,12 @@ mod tests {
             noop_notify::<()>,
             identity_adjust::<()>,
         )
-        .with_max_elapsed_time(Some(Duration::from_secs(1)));
+        .with_max_elapsed_time(Some(Duration::ZERO));
         config.start();
-        config.timer.started_at = Some(Instant::now() - Duration::from_secs(2));
 
         assert_eq!(config.decide(&()), ControlFlow::Break(()));
 
-        config.timer.started_at = Some(Instant::now());
+        config.timer.max_elapsed_time = Some(Duration::MAX);
         assert_eq!(
             config.decide(&()),
             ControlFlow::Continue(Duration::from_secs(1))
@@ -195,9 +199,9 @@ mod tests {
     }
 
     #[test]
-    fn elapsed_limit_should_allow_sleep_that_crosses_limit() {
+    fn test_elapsed_limit_with_longer_delay() {
         let backoff = ConstantBuilder::default()
-            .with_delay(Duration::from_secs(1))
+            .with_delay(Duration::from_secs(2 * 60 * 60))
             .with_max_times(1)
             .build();
         let mut config = RetryConfig::new(
@@ -207,13 +211,12 @@ mod tests {
             noop_notify::<()>,
             identity_adjust::<()>,
         )
-        .with_max_elapsed_time(Some(Duration::from_millis(10)));
+        .with_max_elapsed_time(Some(Duration::from_secs(60 * 60)));
         config.start();
-        config.timer.started_at = Some(Instant::now() - Duration::from_millis(1));
 
         assert_eq!(
             config.decide(&()),
-            ControlFlow::Continue(Duration::from_secs(1))
+            ControlFlow::Continue(Duration::from_secs(2 * 60 * 60))
         );
     }
 }

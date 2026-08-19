@@ -414,10 +414,10 @@ where
 mod default_sleeper_tests {
     extern crate alloc;
 
+    use alloc::boxed::Box;
     use alloc::string::ToString;
     use alloc::vec;
     use alloc::vec::Vec;
-    #[cfg(not(target_arch = "wasm32"))]
     use core::future::ready;
     use core::time::Duration;
 
@@ -428,7 +428,6 @@ mod default_sleeper_tests {
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
     use super::*;
-    #[cfg(not(target_arch = "wasm32"))]
     use crate::ConstantBuilder;
     use crate::ExponentialBuilder;
 
@@ -448,7 +447,7 @@ mod default_sleeper_tests {
 
     #[cfg(feature = "std")]
     #[test]
-    async fn max_elapsed_time_zero_should_not_retry() {
+    async fn test_max_elapsed_time() {
         let attempts = Mutex::new(0);
 
         let result = (|| async {
@@ -463,26 +462,29 @@ mod default_sleeper_tests {
         assert_eq!(*attempts.lock().await, 1);
     }
 
-    #[cfg(all(feature = "std", not(target_arch = "wasm32")))]
+    #[cfg(feature = "std")]
     #[test]
-    async fn max_elapsed_time_should_start_when_first_attempt_begins() {
+    async fn test_max_elapsed_time_starts_on_poll() {
         let attempts = Mutex::new(0);
-        let retry = (|| async {
-            *attempts.lock().await += 1;
-            Err::<(), _>(anyhow::anyhow!("retryable"))
-        })
-        .retry(
-            ConstantBuilder::default()
-                .with_delay(Duration::ZERO)
-                .with_max_times(1),
-        )
-        .with_max_elapsed_time(Duration::from_millis(1))
-        .sleep(|_| ready(()));
+        let mut retry = Box::pin(
+            (|| async {
+                *attempts.lock().await += 1;
+                Err::<(), _>(anyhow::anyhow!("retryable"))
+            })
+            .retry(
+                ConstantBuilder::default()
+                    .with_delay(Duration::ZERO)
+                    .with_max_times(1),
+            )
+            .with_max_elapsed_time(Duration::from_secs(60))
+            .sleep(|_| ready(())),
+        );
 
-        tokio::time::sleep(Duration::from_millis(10)).await;
-        let result = retry.await;
+        assert!(!retry.as_ref().get_ref().config.timer_started());
+        let result = retry.as_mut().await;
 
         assert!(result.is_err());
+        assert!(retry.as_ref().get_ref().config.timer_started());
         assert_eq!(*attempts.lock().await, 2);
     }
 

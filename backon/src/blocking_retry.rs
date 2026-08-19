@@ -295,7 +295,7 @@ mod tests {
 
     #[cfg(feature = "std")]
     #[test]
-    fn max_elapsed_time_zero_should_not_retry() {
+    fn test_max_elapsed_time() {
         let attempts = Mutex::new(0);
 
         let result = (|| {

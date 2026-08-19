@@ -392,7 +392,7 @@ mod tests {
 
     #[cfg(feature = "std")]
     #[test]
-    async fn max_elapsed_time_zero_should_return_context_without_retrying() {
+    async fn test_max_elapsed_time() {
         let attempts = Mutex::new(0);
 
         let (_ctx, result) = (|ctx| async {
