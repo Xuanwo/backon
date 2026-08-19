@@ -167,12 +167,16 @@ where
     }
 }
 
-#[cfg(all(test, feature = "std"))]
+#[cfg(test)]
 mod tests {
+    #[cfg(feature = "std")]
     use super::*;
+    #[cfg(feature = "std")]
     use crate::BackoffBuilder;
+    #[cfg(feature = "std")]
     use crate::ConstantBuilder;
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_elapsed_limit_before_backoff() {
         let backoff = ConstantBuilder::default()
@@ -198,6 +202,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_elapsed_limit_with_longer_delay() {
         let backoff = ConstantBuilder::default()
