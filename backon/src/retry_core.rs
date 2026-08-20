@@ -175,6 +175,8 @@ mod tests {
     use crate::BackoffBuilder;
     #[cfg(feature = "std")]
     use crate::ConstantBuilder;
+    #[cfg(all(feature = "std", target_arch = "wasm32"))]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
     #[cfg(feature = "std")]
     #[test]
