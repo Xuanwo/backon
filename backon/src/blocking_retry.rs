@@ -108,6 +108,19 @@ where
     NF: FnMut(&E, Duration),
     AF: FnMut(&E, Option<Duration>) -> Option<Duration>,
 {
+    /// Set the maximum elapsed time for retry attempts.
+    ///
+    /// Pass `None` to leave the elapsed time unbounded.
+    ///
+    /// The timer starts when [`Self::call`] begins. Once the elapsed time reaches this limit, BackON
+    /// returns the latest error instead of scheduling another retry. It does not interrupt an attempt
+    /// or sleep that is already in progress.
+    #[cfg(feature = "std")]
+    pub fn with_max_elapsed_time(mut self, max_elapsed_time: impl Into<Option<Duration>>) -> Self {
+        self.config = self.config.with_max_elapsed_time(max_elapsed_time.into());
+        self
+    }
+
     /// Set the sleeper for retrying.
     ///
     /// The sleeper should implement the [`BlockingSleeper`] trait. The simplest way is to use a closure like  `Fn(Duration)`.
@@ -235,6 +248,7 @@ where
     ///
     /// TODO: implement [`FnOnce`] after it stable.
     pub fn call(mut self) -> Result<T, E> {
+        self.config.start();
         loop {
             let result = (self.f)();
 
@@ -277,6 +291,23 @@ mod tests {
         assert!(result.is_err());
         assert_eq!("test_query meets error", result.unwrap_err().to_string());
         Ok(())
+    }
+
+    #[cfg(feature = "std")]
+    #[test]
+    fn test_max_elapsed_time() {
+        let attempts = Mutex::new(0);
+
+        let result = (|| {
+            *attempts.lock() += 1;
+            Err::<(), _>(anyhow::anyhow!("retryable"))
+        })
+        .retry(ExponentialBuilder::default())
+        .with_max_elapsed_time(Duration::ZERO)
+        .call();
+
+        assert!(result.is_err());
+        assert_eq!(*attempts.lock(), 1);
     }
 
     #[test]

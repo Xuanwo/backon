@@ -1,6 +1,14 @@
 use core::ops::ControlFlow;
 use core::time::Duration;
 
+#[cfg(all(
+    feature = "std",
+    not(all(target_arch = "wasm32", target_os = "unknown"))
+))]
+use std::time::Instant;
+#[cfg(all(feature = "std", target_arch = "wasm32", target_os = "unknown"))]
+use web_time::Instant;
+
 use crate::Backoff;
 
 pub(crate) fn always_retry<E>(_: &E) -> bool {
@@ -20,6 +28,15 @@ pub(crate) struct RetryConfig<B, Sleep, RetryFn, NotifyFn, AdjustFn> {
     pub(crate) retryable: RetryFn,
     pub(crate) notify: NotifyFn,
     pub(crate) adjust: AdjustFn,
+    timer: RetryTimer,
+}
+
+#[derive(Default)]
+struct RetryTimer {
+    #[cfg(feature = "std")]
+    max_elapsed_time: Option<Duration>,
+    #[cfg(feature = "std")]
+    started_at: Option<Instant>,
 }
 
 impl<B, Sleep, RetryFn, NotifyFn, AdjustFn> RetryConfig<B, Sleep, RetryFn, NotifyFn, AdjustFn> {
@@ -36,6 +53,7 @@ impl<B, Sleep, RetryFn, NotifyFn, AdjustFn> RetryConfig<B, Sleep, RetryFn, Notif
             retryable,
             notify,
             adjust,
+            timer: RetryTimer::default(),
         }
     }
 
@@ -46,6 +64,7 @@ impl<B, Sleep, RetryFn, NotifyFn, AdjustFn> RetryConfig<B, Sleep, RetryFn, Notif
             retryable: self.retryable,
             notify: self.notify,
             adjust: self.adjust,
+            timer: self.timer,
         }
     }
 
@@ -59,6 +78,7 @@ impl<B, Sleep, RetryFn, NotifyFn, AdjustFn> RetryConfig<B, Sleep, RetryFn, Notif
             retryable,
             notify: self.notify,
             adjust: self.adjust,
+            timer: self.timer,
         }
     }
 
@@ -69,6 +89,7 @@ impl<B, Sleep, RetryFn, NotifyFn, AdjustFn> RetryConfig<B, Sleep, RetryFn, Notif
             retryable: self.retryable,
             notify,
             adjust: self.adjust,
+            timer: self.timer,
         }
     }
 
@@ -79,7 +100,41 @@ impl<B, Sleep, RetryFn, NotifyFn, AdjustFn> RetryConfig<B, Sleep, RetryFn, Notif
             retryable: self.retryable,
             notify: self.notify,
             adjust,
+            timer: self.timer,
         }
+    }
+
+    #[cfg(feature = "std")]
+    pub(crate) fn with_max_elapsed_time(mut self, max_elapsed_time: Option<Duration>) -> Self {
+        self.timer.max_elapsed_time = max_elapsed_time;
+        self
+    }
+
+    pub(crate) fn start(&mut self) {
+        #[cfg(feature = "std")]
+        if self.timer.max_elapsed_time.is_some() && self.timer.started_at.is_none() {
+            self.timer.started_at = Some(Instant::now());
+        }
+    }
+
+    #[cfg(all(test, feature = "std"))]
+    pub(crate) fn timer_started(&self) -> bool {
+        self.timer.started_at.is_some()
+    }
+
+    fn has_elapsed(&self) -> bool {
+        #[cfg(feature = "std")]
+        {
+            self.timer
+                .max_elapsed_time
+                .zip(self.timer.started_at)
+                .is_some_and(|(max_elapsed_time, started_at)| {
+                    started_at.elapsed() >= max_elapsed_time
+                })
+        }
+
+        #[cfg(not(feature = "std"))]
+        false
     }
 }
 
@@ -97,6 +152,10 @@ where
             return ControlFlow::Break(());
         }
 
+        if self.has_elapsed() {
+            return ControlFlow::Break(());
+        }
+
         let candidate = self.backoff.next();
         match (self.adjust)(err, candidate) {
             Some(dur) => {
@@ -105,5 +164,66 @@ where
             }
             None => ControlFlow::Break(()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[cfg(feature = "std")]
+    use super::*;
+    #[cfg(feature = "std")]
+    use crate::BackoffBuilder;
+    #[cfg(feature = "std")]
+    use crate::ConstantBuilder;
+    #[cfg(all(feature = "std", target_arch = "wasm32"))]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
+
+    #[cfg(feature = "std")]
+    #[test]
+    fn test_elapsed_limit_before_backoff() {
+        let backoff = ConstantBuilder::default()
+            .with_delay(Duration::from_secs(1))
+            .with_max_times(1)
+            .build();
+        let mut config = RetryConfig::new(
+            backoff,
+            (),
+            always_retry::<()>,
+            noop_notify::<()>,
+            identity_adjust::<()>,
+        )
+        .with_max_elapsed_time(Some(Duration::ZERO));
+        config.start();
+
+        assert_eq!(config.decide(&()), ControlFlow::Break(()));
+
+        config.timer.max_elapsed_time = Some(Duration::MAX);
+        assert_eq!(
+            config.decide(&()),
+            ControlFlow::Continue(Duration::from_secs(1))
+        );
+    }
+
+    #[cfg(feature = "std")]
+    #[test]
+    fn test_elapsed_limit_with_longer_delay() {
+        let backoff = ConstantBuilder::default()
+            .with_delay(Duration::from_secs(2 * 60 * 60))
+            .with_max_times(1)
+            .build();
+        let mut config = RetryConfig::new(
+            backoff,
+            (),
+            always_retry::<()>,
+            noop_notify::<()>,
+            identity_adjust::<()>,
+        )
+        .with_max_elapsed_time(Some(Duration::from_secs(60 * 60)));
+        config.start();
+
+        assert_eq!(
+            config.decide(&()),
+            ControlFlow::Continue(Duration::from_secs(2 * 60 * 60))
+        );
     }
 }

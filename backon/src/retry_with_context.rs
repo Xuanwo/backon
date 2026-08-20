@@ -155,6 +155,19 @@ where
     NF: FnMut(&E, Duration),
     AF: FnMut(&E, Option<Duration>) -> Option<Duration>,
 {
+    /// Set the maximum elapsed time for retry attempts.
+    ///
+    /// Pass `None` to leave the elapsed time unbounded.
+    ///
+    /// The timer starts when the first attempt begins. Once the elapsed time reaches this limit,
+    /// BackON returns the latest error and context instead of scheduling another retry. It does not
+    /// interrupt an attempt or sleep that is already in progress.
+    #[cfg(feature = "std")]
+    pub fn with_max_elapsed_time(mut self, max_elapsed_time: impl Into<Option<Duration>>) -> Self {
+        self.config = self.config.with_max_elapsed_time(max_elapsed_time.into());
+        self
+    }
+
     /// Set the sleeper for retrying.
     ///
     /// The sleeper should implement the [`Sleeper`] trait. The simplest way is to use a closure that returns a `Future`.
@@ -307,6 +320,7 @@ where
         loop {
             match &mut this.state {
                 State::Idle(ctx) => {
+                    this.config.start();
                     let ctx = ctx.take().expect("context must be valid");
                     let fut = (this.future_fn)(ctx);
                     this.state = State::Polling(fut);
@@ -374,6 +388,24 @@ mod tests {
         async fn hello(&mut self) -> Result<usize> {
             Err(anyhow!("not retryable"))
         }
+    }
+
+    #[cfg(feature = "std")]
+    #[test]
+    async fn test_max_elapsed_time() {
+        let attempts = Mutex::new(0);
+
+        let (_ctx, result) = (|ctx| async {
+            *attempts.lock().await += 1;
+            (ctx, Err::<(), _>(anyhow!("retryable")))
+        })
+        .retry(ExponentialBuilder::default())
+        .with_max_elapsed_time(Duration::ZERO)
+        .context(Test)
+        .await;
+
+        assert!(result.is_err());
+        assert_eq!(*attempts.lock().await, 1);
     }
 
     #[test]

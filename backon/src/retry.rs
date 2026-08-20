@@ -115,6 +115,19 @@ where
     NF: FnMut(&E, Duration),
     AF: FnMut(&E, Option<Duration>) -> Option<Duration>,
 {
+    /// Set the maximum elapsed time for retry attempts.
+    ///
+    /// Pass `None` to leave the elapsed time unbounded.
+    ///
+    /// The timer starts when the first attempt begins. Once the elapsed time reaches this limit,
+    /// BackON returns the latest error instead of scheduling another retry. It does not interrupt an
+    /// attempt or sleep that is already in progress.
+    #[cfg(feature = "std")]
+    pub fn with_max_elapsed_time(mut self, max_elapsed_time: impl Into<Option<Duration>>) -> Self {
+        self.config = self.config.with_max_elapsed_time(max_elapsed_time.into());
+        self
+    }
+
     /// Set the sleeper for retrying.
     ///
     /// The sleeper should implement the [`Sleeper`] trait. The simplest way is to use a closure that returns a `Future`.
@@ -357,6 +370,7 @@ where
         loop {
             match &mut this.state {
                 State::Idle => {
+                    this.config.start();
                     let fut = (this.future_fn)();
                     this.state = State::Polling(fut);
                     continue;
@@ -400,9 +414,11 @@ where
 mod default_sleeper_tests {
     extern crate alloc;
 
+    use alloc::boxed::Box;
     use alloc::string::ToString;
     use alloc::vec;
     use alloc::vec::Vec;
+    use core::future::ready;
     use core::time::Duration;
 
     use tokio::sync::Mutex;
@@ -412,6 +428,7 @@ mod default_sleeper_tests {
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
     use super::*;
+    use crate::ConstantBuilder;
     use crate::ExponentialBuilder;
 
     async fn always_error() -> anyhow::Result<()> {
@@ -426,6 +443,49 @@ mod default_sleeper_tests {
 
         assert!(result.is_err());
         assert_eq!("test_query meets error", result.unwrap_err().to_string());
+    }
+
+    #[cfg(feature = "std")]
+    #[test]
+    async fn test_max_elapsed_time() {
+        let attempts = Mutex::new(0);
+
+        let result = (|| async {
+            *attempts.lock().await += 1;
+            Err::<(), _>(anyhow::anyhow!("retryable"))
+        })
+        .retry(ExponentialBuilder::default())
+        .with_max_elapsed_time(Duration::ZERO)
+        .await;
+
+        assert!(result.is_err());
+        assert_eq!(*attempts.lock().await, 1);
+    }
+
+    #[cfg(feature = "std")]
+    #[test]
+    async fn test_max_elapsed_time_starts_on_poll() {
+        let attempts = Mutex::new(0);
+        let mut retry = Box::pin(
+            (|| async {
+                *attempts.lock().await += 1;
+                Err::<(), _>(anyhow::anyhow!("retryable"))
+            })
+            .retry(
+                ConstantBuilder::default()
+                    .with_delay(Duration::ZERO)
+                    .with_max_times(1),
+            )
+            .with_max_elapsed_time(Duration::from_secs(60))
+            .sleep(|_| ready(())),
+        );
+
+        assert!(!retry.as_ref().get_ref().config.timer_started());
+        let result = retry.as_mut().await;
+
+        assert!(result.is_err());
+        assert!(retry.as_ref().get_ref().config.timer_started());
+        assert_eq!(*attempts.lock().await, 2);
     }
 
     #[test]
