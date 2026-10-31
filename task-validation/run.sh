@@ -6,6 +6,9 @@ source /home/xuanwo/.cargo/env
 source_dir=$1
 evidence_dir=$2
 suite=$3
+if [ "$suite" = wasm ] && [ "$#" -ge 4 ]; then
+    export PATH="$4:$PATH"
+fi
 mkdir -p "$evidence_dir"
 cd "$source_dir" || exit 2
 exec > >(tee "$evidence_dir/run.log") 2>&1
@@ -51,6 +54,8 @@ case "$suite" in
         ;;
     wasm)
         cd backon || exit 2
+        run node --version
+        run wasm-pack --version
         run wasm-pack test --node --all-features -- --skip blocking
         ;;
     nightly)
