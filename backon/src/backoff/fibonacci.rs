@@ -199,10 +199,17 @@ impl Iterator for FibonacciBackoff {
                 if next < self.max_delay.unwrap_or(Duration::MAX) {
                     if let Some(prev) = self.previous_delay {
                         next = next.saturating_add(prev);
-                        self.current_delay = Some(next);
                     }
                     self.previous_delay = Some(cur);
                 }
+
+                // Clamp to max_delay so a Fibonacci step can never overshoot.
+                if let Some(max_delay) = self.max_delay {
+                    if next > max_delay {
+                        next = max_delay;
+                    }
+                }
+                self.current_delay = Some(next);
 
                 // If jitter is enabled, add random jitter based on min delay.
                 if self.jitter {
@@ -282,6 +289,23 @@ mod tests {
         assert_eq!(Some(Duration::from_secs(1)), fib.next());
         assert_eq!(Some(Duration::from_secs(2)), fib.next());
         assert_eq!(Some(Duration::from_secs(2)), fib.next());
+        assert_eq!(None, fib.next());
+    }
+
+    #[test]
+    fn test_fibonacci_max_delay_clamp() {
+        let mut fib = FibonacciBuilder::default()
+            .with_max_times(7)
+            .with_max_delay(Duration::from_secs(4))
+            .build();
+
+        assert_eq!(Some(Duration::from_secs(1)), fib.next());
+        assert_eq!(Some(Duration::from_secs(1)), fib.next());
+        assert_eq!(Some(Duration::from_secs(2)), fib.next());
+        assert_eq!(Some(Duration::from_secs(3)), fib.next());
+        assert_eq!(Some(Duration::from_secs(4)), fib.next());
+        assert_eq!(Some(Duration::from_secs(4)), fib.next());
+        assert_eq!(Some(Duration::from_secs(4)), fib.next());
         assert_eq!(None, fib.next());
     }
 

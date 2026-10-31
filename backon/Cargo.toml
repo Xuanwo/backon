@@ -25,7 +25,7 @@ embassy-sleep = ["embassy-time"]
 futures-timer-sleep = ["futures-timer"]
 gloo-timers-sleep = ["gloo-timers/futures"]
 std = ["fastrand/std"]
-std-blocking-sleep = []
+std-blocking-sleep = ["fastrand/std"]
 tokio-sleep = ["tokio/time"]
 
 [dependencies]
