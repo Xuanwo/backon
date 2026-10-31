@@ -9,6 +9,4 @@ fn invalid_blocking() -> Result<(), &'static str> {
     Ok(())
 }
 
-fn main() {
-    let _ = invalid_blocking();
-}
+fn main() {}
