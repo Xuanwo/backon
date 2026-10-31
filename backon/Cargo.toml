@@ -25,7 +25,7 @@ embassy-sleep = ["embassy-time"]
 futures-timer-sleep = ["futures-timer"]
 gloo-timers-sleep = ["gloo-timers/futures"]
 std = ["fastrand/std"]
-std-blocking-sleep = []
+std-blocking-sleep = ["fastrand/std"]
 tokio-sleep = ["tokio/time"]
 
 [dependencies]
@@ -40,12 +40,12 @@ tokio = { version = "1", optional = true }
 futures-timer = { version = "3.0.3", optional = true, features = [
   "gloo-timers",
 ] }
-gloo-timers = { version = "0.3", optional = true }
+gloo-timers = { version = "0.4", optional = true }
 
 [dev-dependencies]
 anyhow = "1"
 reqwest = "0.13"
-spin = "0.10.0"
+spin = "0.12.0"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 tokio = { version = "1", features = [
