@@ -456,6 +456,27 @@ mod tests {
     }
 
     #[test]
+    fn test_exponential_jitter_at_max_delay() {
+        let max_delay = Duration::from_secs(1);
+        let mut exp = ExponentialBuilder::new()
+            .with_min_delay(max_delay)
+            .with_max_delay(max_delay)
+            .with_max_times(2)
+            .with_jitter()
+            .with_jitter_seed(7)
+            .build();
+
+        let first = exp.next().unwrap();
+        let second = exp.next().unwrap();
+        for delay in [first, second] {
+            assert!(delay > max_delay);
+            assert!(delay < Duration::from_secs(2));
+        }
+        assert_ne!(first, second);
+        assert_eq!(None, exp.next());
+    }
+
+    #[test]
     fn test_exponential_exceeds_max_delay() {
         const MAX_DELAY: Duration = Duration::from_millis(600);
 
