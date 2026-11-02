@@ -53,6 +53,9 @@ jobs:
         env:
           RUST_LOG: DEBUG
           RUST_BACKTRACE: full
+      - name: Test blocking-only features
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo test -p backon --no-default-features --features std-blocking-sleep
 
   # windows failed to run the test with embassy-sleep enabled.
   unit-windows:
@@ -75,6 +78,10 @@ jobs:
         env:
           RUST_LOG: DEBUG
           RUST_BACKTRACE: full
+          RUSTDOCFLAGS: "--cfg docsrs"
+      - name: Test blocking-only documentation
+        run: cargo +nightly test -p backon --no-default-features --features std-blocking-sleep
+        env:
           RUSTDOCFLAGS: "--cfg docsrs"
 
   wasm-unit:

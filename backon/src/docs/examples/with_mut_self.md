@@ -25,6 +25,7 @@ This is a bit more complex since we need to capture the receiver in the closure 
          (v, res)
      })
      .retry(ExponentialBuilder::default())
+     .sleep(tokio::time::sleep)
      // Passing context in.
      .context(test)
      .when(|e| e.to_string() == "retryable")

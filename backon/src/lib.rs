@@ -49,6 +49,9 @@
 //! | [`EmbassySleep`]        | embassy-sleep       |   no_std    |  Yes          |
 //! | [`StdSleeper`]          | std-blocking-sleep  |    std      |  No           |
 //!
+//! The Tokio examples pass `tokio::time::sleep` explicitly so they also work
+//! without the `tokio-sleep` feature.
+//!
 //! ## Custom Sleeper
 //!
 //! If you do not want to use the built-in Sleeper, you CAN provide a custom
@@ -200,6 +203,7 @@
 //!         }
 //!     }
 //!     .retry(ExponentialBuilder::default())
+//!     .sleep(tokio::time::sleep)
 //!     .context(test)
 //!     .await;
 //!

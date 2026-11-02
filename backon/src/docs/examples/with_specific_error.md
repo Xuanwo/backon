@@ -13,6 +13,7 @@ async fn fetch() -> Result<String> {
 async fn main() -> Result<()> {
     let content = fetch
         .retry(ExponentialBuilder::default())
+        .sleep(tokio::time::sleep)
         .when(|e| e.to_string() == "retryable")
         .await?;
     println!("fetch succeeded: {}", content);

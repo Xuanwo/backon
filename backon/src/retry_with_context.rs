@@ -74,6 +74,7 @@ use crate::sleep::MaybeSleeper;
 ///         }
 ///     }
 ///     .retry(ExponentialBuilder::default())
+///     .sleep(tokio::time::sleep)
 ///     .context(test)
 ///     .await;
 ///
@@ -212,6 +213,7 @@ where
     /// async fn main() -> Result<()> {
     ///     let content = fetch
     ///         .retry(ExponentialBuilder::default())
+    ///         .sleep(tokio::time::sleep)
     ///         .when(|e| e.to_string() == "EOF")
     ///         .await?;
     ///     println!("fetch succeeded: {}", content);
@@ -256,6 +258,7 @@ where
     /// async fn main() -> Result<()> {
     ///     let content = fetch
     ///         .retry(ExponentialBuilder::default())
+    ///         .sleep(tokio::time::sleep)
     ///         .notify(|err: &anyhow::Error, dur: Duration| {
     ///             println!("retrying error {:?} with sleeping {:?}", err, dur);
     ///         })
