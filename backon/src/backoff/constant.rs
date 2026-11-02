@@ -25,7 +25,10 @@ use crate::backoff::BackoffBuilder;
 ///
 /// #[tokio::main(flavor = "current_thread")]
 /// async fn main() -> Result<()> {
-///     let content = fetch.retry(ConstantBuilder::default()).await?;
+///     let content = fetch
+///         .retry(ConstantBuilder::default())
+///         .sleep(tokio::time::sleep)
+///         .await?;
 ///     println!("fetch succeeded: {}", content);
 ///
 ///     Ok(())
