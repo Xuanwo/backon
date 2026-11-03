@@ -43,6 +43,7 @@ pub struct FibonacciBuilder {
     min_delay: Duration,
     max_delay: Option<Duration>,
     max_times: Option<usize>,
+    total_delay: Option<Duration>,
 }
 
 impl Default for FibonacciBuilder {
@@ -60,6 +61,7 @@ impl FibonacciBuilder {
             min_delay: Duration::from_secs(1),
             max_delay: Some(Duration::from_secs(60)),
             max_times: Some(3),
+            total_delay: None,
         }
     }
 
@@ -118,6 +120,15 @@ impl FibonacciBuilder {
         self.max_times = None;
         self
     }
+
+    /// Set the total delay for the backoff.
+    ///
+    /// The backoff will stop yielding sleep durations once the cumulative sleep time
+    /// plus the next sleep duration would exceed `total_delay`.
+    pub const fn with_total_delay(mut self, total_delay: Option<Duration>) -> Self {
+        self.total_delay = total_delay;
+        self
+    }
 }
 
 impl BackoffBuilder for FibonacciBuilder {
@@ -140,10 +151,12 @@ impl BackoffBuilder for FibonacciBuilder {
             min_delay: self.min_delay,
             max_delay: self.max_delay,
             max_times: self.max_times,
+            total_delay: self.total_delay,
 
             previous_delay: None,
             current_delay: None,
             attempts: 0,
+            cumulative_delay: Duration::ZERO,
         }
     }
 }
@@ -167,10 +180,12 @@ pub struct FibonacciBackoff {
     min_delay: Duration,
     max_delay: Option<Duration>,
     max_times: Option<usize>,
+    total_delay: Option<Duration>,
 
     previous_delay: Option<Duration>,
     current_delay: Option<Duration>,
     attempts: usize,
+    cumulative_delay: Duration,
 }
 
 impl Iterator for FibonacciBackoff {
@@ -182,7 +197,7 @@ impl Iterator for FibonacciBackoff {
         }
         self.attempts += 1;
 
-        match self.current_delay {
+        let next = match self.current_delay {
             None => {
                 // If current_delay is None, it's must be the first time to retry.
                 let mut next = self.min_delay;
@@ -193,7 +208,7 @@ impl Iterator for FibonacciBackoff {
                     next += next.mul_f32(self.rng.f32());
                 }
 
-                Some(next)
+                next
             }
             Some(cur) => {
                 let mut next = cur;
@@ -219,9 +234,24 @@ impl Iterator for FibonacciBackoff {
                     next += self.min_delay.mul_f32(self.rng.f32());
                 }
 
-                Some(next)
+                next
             }
+        };
+
+        // Check if adding the next delay would exceed the total delay limit.
+        let total_delay_check = self
+            .total_delay
+            .is_none_or(|total| self.cumulative_delay.saturating_add(next) <= total);
+
+        if !total_delay_check {
+            return None;
         }
+
+        if self.total_delay.is_some() {
+            self.cumulative_delay = self.cumulative_delay.saturating_add(next);
+        }
+
+        Some(next)
     }
 }
 
@@ -330,6 +360,19 @@ mod tests {
         );
         assert_eq!(Some(Duration::MAX), fib.next());
         assert_eq!(Some(Duration::MAX), fib.next());
+        assert_eq!(None, fib.next());
+    }
+
+    #[test]
+    fn test_fibonacci_total_delay() {
+        let mut fib = FibonacciBuilder::default()
+            .with_min_delay(Duration::from_secs(1))
+            .with_total_delay(Some(Duration::from_secs(3)))
+            .with_max_times(5)
+            .build();
+
+        assert_eq!(Some(Duration::from_secs(1)), fib.next());
+        assert_eq!(Some(Duration::from_secs(1)), fib.next());
         assert_eq!(None, fib.next());
     }
 
