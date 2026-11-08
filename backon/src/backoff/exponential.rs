@@ -267,7 +267,7 @@ pub(crate) fn saturating_mul(d: Duration, rhs: f32) -> Duration {
 mod tests {
     use core::time::Duration;
 
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
     use crate::BackoffBuilder;

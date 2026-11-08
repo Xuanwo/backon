@@ -409,9 +409,9 @@ mod default_sleeper_tests {
     use core::time::Duration;
 
     use tokio::sync::Mutex;
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     use tokio::test;
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
     use super::*;
@@ -540,9 +540,9 @@ mod custom_sleeper_tests {
     use core::future::ready;
     use core::time::Duration;
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     use tokio::test;
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
     use super::*;

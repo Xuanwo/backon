@@ -229,7 +229,7 @@ impl Iterator for FibonacciBackoff {
 mod tests {
     use core::time::Duration;
 
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
     use super::*;

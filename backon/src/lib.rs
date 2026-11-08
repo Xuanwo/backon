@@ -43,8 +43,8 @@
 //!
 //! |      `Sleeper`          | feature             | Environment |  Asynchronous |
 //! |-------------------------|---------------------|-------------|---------------|
-//! | [`TokioSleeper`]        | tokio-sleep         | non-wasm32  |  Yes          |
-//! | [`GlooTimersSleep`]     | gloo-timers-sleep   |   wasm32    |  Yes          |
+//! | [`TokioSleeper`]        | tokio-sleep         |  non-wasm   |  Yes          |
+//! | [`GlooTimersSleep`]     | gloo-timers-sleep   |    wasm     |  Yes          |
 //! | [`FuturesTimerSleeper`] | futures-timer-sleep |wasm/non-wasm|  Yes          |
 //! | [`EmbassySleep`]        | embassy-sleep       |   no_std    |  Yes          |
 //! | [`StdSleeper`]          | std-blocking-sleep  |    std      |  No           |
@@ -235,10 +235,10 @@ mod sleep;
 pub use sleep::DefaultSleeper;
 #[cfg(feature = "futures-timer-sleep")]
 pub use sleep::FuturesTimerSleeper;
-#[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
+#[cfg(all(target_family = "wasm", feature = "gloo-timers-sleep"))]
 pub use sleep::GlooTimersSleep;
 pub use sleep::Sleeper;
-#[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
+#[cfg(all(not(target_family = "wasm"), feature = "tokio-sleep"))]
 pub use sleep::TokioSleeper;
 
 mod blocking_retry;

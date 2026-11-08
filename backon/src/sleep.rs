@@ -40,12 +40,12 @@ pub type DefaultSleeper = PleaseEnableAFeatureOrProvideACustomSleeper;
 /// The default implementation of `Sleeper` while feature `tokio-sleep` enabled.
 ///
 /// it uses `tokio::time::sleep`.
-#[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
+#[cfg(all(not(target_family = "wasm"), feature = "tokio-sleep"))]
 pub type DefaultSleeper = TokioSleeper;
 /// The default implementation of `Sleeper` while feature `gloo-timers-sleep` enabled.
 ///
 /// It uses `gloo_timers::sleep::sleep`.
-#[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
+#[cfg(all(target_family = "wasm", feature = "gloo-timers-sleep"))]
 pub type DefaultSleeper = GlooTimersSleep;
 
 /// A placeholder type that does not implement [`Sleeper`] and will therefore fail to compile if used as one.
@@ -65,11 +65,11 @@ impl MaybeSleeper for PleaseEnableAFeatureOrProvideACustomSleeper {
 ///
 /// It will adhere to [pausing/auto-advancing](https://docs.rs/tokio/latest/tokio/time/fn.pause.html)
 /// in Tokio's Runtime semantics, if enabled.
-#[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
+#[cfg(all(not(target_family = "wasm"), feature = "tokio-sleep"))]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TokioSleeper;
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "tokio-sleep"))]
+#[cfg(all(not(target_family = "wasm"), feature = "tokio-sleep"))]
 impl Sleeper for TokioSleeper {
     type Sleep = tokio::time::Sleep;
 
@@ -97,11 +97,11 @@ impl Sleeper for FuturesTimerSleeper {
 }
 
 /// The default implementation of `Sleeper` utilizes `gloo_timers::future::sleep`.
-#[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
+#[cfg(all(target_family = "wasm", feature = "gloo-timers-sleep"))]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GlooTimersSleep;
 
-#[cfg(all(target_arch = "wasm32", feature = "gloo-timers-sleep"))]
+#[cfg(all(target_family = "wasm", feature = "gloo-timers-sleep"))]
 impl Sleeper for GlooTimersSleep {
     type Sleep = gloo_timers::future::TimeoutFuture;
 
