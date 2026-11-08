@@ -83,6 +83,9 @@ jobs:
         run: cargo +nightly test -p backon --no-default-features --features std-blocking-sleep
         env:
           RUSTDOCFLAGS: "--cfg docsrs"
+      - run: rustup component add rust-src --toolchain nightly
+      - name: Check wasm64
+        run: cargo +nightly check -p backon -Zbuild-std=std,panic_abort --target wasm64-unknown-unknown
 
   wasm-unit:
     runs-on: ubuntu-latest
