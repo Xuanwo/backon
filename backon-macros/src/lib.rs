@@ -74,7 +74,9 @@ use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::parse::{Parse, ParseStream};
 use syn::spanned::Spanned;
-use syn::{Error, FnArg, Ident, ImplItemFn, ItemFn, LitBool, Pat, Path, Signature, Token};
+use syn::{
+    Error, FnArg, Ident, ImplItemFn, ItemFn, LitBool, Pat, Path, ReceiverKind, Signature, Token,
+};
 
 /// Attribute for turning a function into a retried one using backon retry APIs.
 #[proc_macro_attribute]
@@ -142,14 +144,18 @@ fn expand_method(args: &BackonArgs, method: ImplItemFn) -> syn::Result<TokenStre
         }
     };
 
-    if let Some(mutability) = receiver.mutability.as_ref() {
+    let mutability = match &receiver.kind {
+        ReceiverKind::Reference(_, _, Some(mutability)) => Some(mutability),
+        _ => receiver.mutability.as_ref(),
+    };
+    if let Some(mutability) = mutability {
         return Err(Error::new(
             mutability.span(),
             "`#[backon]` does not yet support methods taking `&mut self`; please fall back to manual `RetryableWithContext` usage",
         ));
     }
 
-    if receiver.reference.is_none() {
+    if !matches!(receiver.kind, ReceiverKind::Reference(..)) {
         return Err(Error::new(
             receiver.self_token.span,
             "`#[backon]` does not support methods that take ownership of `self`; please fall back to manual `RetryableWithContext` usage",
@@ -360,26 +366,15 @@ fn prepare_context(sig: &Signature, include_receiver: bool) -> syn::Result<Conte
                     continue;
                 }
 
-                if receiver.reference.is_none() {
+                let ReceiverKind::Reference(_, lifetime, mutability) = &receiver.kind else {
                     return Err(Error::new(
                         receiver.self_token.span,
                         "`context = true` does not support methods that take ownership of `self`",
                     ));
-                }
-
-                if receiver.colon_token.is_some() {
-                    return Err(Error::new(
-                        receiver.span(),
-                        "`#[backon]` currently supports only `&self` and `&mut self` receivers",
-                    ));
-                }
+                };
 
                 let binding = format_ident!("__backon_self");
-                let lifetime = receiver
-                    .reference
-                    .as_ref()
-                    .and_then(|(_, lifetime)| lifetime.as_ref());
-                let ty_tokens = if receiver.mutability.is_some() {
+                let ty_tokens = if mutability.is_some() {
                     if let Some(lifetime) = lifetime {
                         quote!(& #lifetime mut Self)
                     } else {
